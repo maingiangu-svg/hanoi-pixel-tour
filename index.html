@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hà Nội Pixel Tour</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="game-card" aria-label="Hà Nội Pixel Tour">
+      <div class="title-row">
+        <div>
+          <p class="kicker">Trò chơi giáo dục pixel</p>
+          <h1>Hà Nội Pixel Tour</h1>
+        </div>
+        <p class="guide">
+          W/S hoặc ↑/↓: Chọn | Enter: Xác nhận | 1–4: Chọn nhanh | Esc: Đóng
+        </p>
+      </div>
+
+      <div class="game-frame">
+        <canvas id="gameCanvas" width="1024" height="640"></canvas>
+
+        <div id="topBar" class="top-bar" aria-live="polite">
+          <div class="hud-pill">
+            <span class="hud-label">Khu vực</span>
+            <strong id="hudMapName">Hoàn Kiếm - Phố Cổ</strong>
+          </div>
+          <div class="hud-pill">
+            <span class="hud-label">VND</span>
+            <strong id="hudMoney">50.000đ</strong>
+          </div>
+          <div class="hud-pill">
+            <span class="hud-label">Tem</span>
+            <strong id="hudStamps">0</strong>
+          </div>
+          <div class="hud-pill">
+            <span class="hud-label">Ẩm thực</span>
+            <strong id="hudFoods">0</strong>
+          </div>
+          <div class="hud-pill hud-objective">
+            <span class="hud-label">Mục tiêu</span>
+            <strong id="hudObjective">Ghé thăm Hồ Gươm.</strong>
+          </div>
+        </div>
+
+        <div id="nearbyHint" class="nearby-hint hidden">E: Tương tác</div>
+
+        <div id="dialogueBox" class="dialogue-box hidden" role="status" aria-live="polite">
+          <p id="dialogueText"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="inventoryPanel" class="panel-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="inventoryTitle">
+    <article class="panel">
+      <div class="panel-header">
+        <h2 id="inventoryTitle">Tủ đồ</h2>
+        <button id="closeInventory" class="panel-close" type="button">Đóng</button>
+      </div>
+      <div id="inventoryContent" class="panel-content"></div>
+    </article>
+  </div>
+
+  <div id="questPanel" class="panel-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="questTitle">
+    <article class="panel">
+      <div class="panel-header">
+        <h2 id="questTitle">Một ngày du lịch Hà Nội</h2>
+        <button id="closeQuest" class="panel-close" type="button">Đóng</button>
+      </div>
+      <div id="questContent" class="panel-content"></div>
+    </article>
+  </div>
+
+  <div id="journalPanel" class="panel-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="journalTitle">
+    <article class="panel panel-wide">
+      <div class="panel-header">
+        <div>
+          <p class="modal-tag">Nhật ký</p>
+          <h2 id="journalTitle">Sổ tay khám phá</h2>
+        </div>
+        <button id="closeJournal" class="panel-close" type="button">Đóng</button>
+      </div>
+      <div id="journalContent" class="panel-content"></div>
+    </article>
+  </div>
+
+  <div id="quizModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
+    <article class="modal-box">
+      <p id="quizTag" class="modal-tag">Câu hỏi</p>
+      <h2 id="quizTitle">Câu hỏi</h2>
+      <p id="quizQuestion" class="modal-question"></p>
+      <div id="quizOptions" class="quiz-options"></div>
+      <p id="quizFeedback" class="quiz-feedback hidden"></p>
+      <button id="quizContinue" class="primary-button hidden" type="button">Tiếp tục</button>
+    </article>
+  </div>
+
+  <div id="choiceModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="choiceTitle">
+    <article class="modal-box">
+      <p id="choiceTag" class="modal-tag">Tương tác</p>
+      <h2 id="choiceTitle">Tương tác</h2>
+      <p id="choiceBody" class="modal-question"></p>
+      <div id="choiceActions" class="choice-actions"></div>
+    </article>
+  </div>
+
+  <div id="infoModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+    <article class="modal-box info-box">
+      <div class="info-ornament" aria-hidden="true"></div>
+      <p id="infoTag" class="modal-tag">Sổ tay</p>
+      <h2 id="infoTitle">Thông tin khám phá</h2>
+      <p id="infoIntro" class="info-intro"></p>
+      <div id="infoContent" class="info-content"></div>
+      <p class="info-hint">W/S hoặc ↑/↓: Chọn | Enter: Xác nhận | 1–4: Chọn nhanh | Esc: Đóng</p>
+      <div id="infoActions" class="choice-actions"></div>
+    </article>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
