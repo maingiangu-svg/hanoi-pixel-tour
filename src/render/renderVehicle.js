@@ -1,4 +1,6 @@
 import { ctx, player, state } from "../state.js";
+import { isMoRidingWithPlayer } from "../systems/moCompanion.js";
+import { drawMoVehiclePassenger } from "./renderCompanion.js";
 
 export function drawVehicleWithRider() {
   const x = Math.round(player.x);
@@ -8,11 +10,13 @@ export function drawVehicleWithRider() {
 
   if (facing === "left" || facing === "right") {
     drawSideVehicle(x, y + bob, facing);
+    if (isMoRidingWithPlayer()) drawMoVehiclePassenger(x, y + bob, facing);
     drawSideRider(x, y + bob, facing);
     return;
   }
 
   drawVerticalVehicle(x, y + bob, facing);
+  if (isMoRidingWithPlayer()) drawMoVehiclePassenger(x, y + bob, facing);
   drawVerticalRider(x, y + bob, facing);
 }
 

@@ -18,6 +18,7 @@
 body {
   margin: 0;
   min-height: 100dvh;
+  overflow: hidden;
   background:
     radial-gradient(circle at 18% 10%, rgba(91, 168, 93, 0.28), transparent 28%),
     linear-gradient(180deg, #14251f 0%, #211d26 56%, #111318 100%);
@@ -32,20 +33,21 @@ button {
 .app-shell {
   min-height: 100dvh;
   display: grid;
-  place-items: center;
-  padding: 18px;
+  place-items: start center;
+  padding: 8px;
 }
 
 .game-card {
   width: min(100%, 1088px);
+  max-width: none;
 }
 
 .title-row {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
 .kicker {
@@ -59,27 +61,34 @@ button {
 h1 {
   margin: 0;
   color: #fff8d6;
-  font-size: clamp(30px, 5vw, 48px);
+  font-size: clamp(22px, 2.5vw, 32px);
   line-height: 1;
   text-shadow: 4px 4px 0 #000;
 }
 
 .guide {
-  max-width: 520px;
+  max-width: 460px;
   margin: 0;
-  padding: 10px 12px;
-  border: 4px solid var(--ink);
+  padding: 4px 7px;
+  border: 3px solid var(--ink);
   background: #fff0a8;
   color: #1d1d22;
   box-shadow: 5px 5px 0 #000;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.35;
+}
+
+@media (min-width: 781px) {
+  .kicker {
+    display: none;
+  }
 }
 
 .game-frame {
   position: relative;
   width: min(100%, 1024px);
+  height: auto;
   margin: 0 auto;
   border: 6px solid #090a0e;
   background: #4f9654;
@@ -89,20 +98,21 @@ h1 {
 canvas {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 10;
+  height: 100%;
+  aspect-ratio: auto;
+  image-rendering: crisp-edges;
   image-rendering: pixelated;
 }
 
 .top-bar {
   position: absolute;
   z-index: 4;
-  top: 8px;
-  left: 8px;
-  right: 8px;
+  top: 6px;
+  left: 6px;
+  right: 6px;
   display: grid;
-  grid-template-columns: 1.2fr 0.72fr 0.48fr 0.68fr 1.9fr;
-  gap: 6px;
+  grid-template-columns: 1.12fr 0.62fr 0.82fr 0.42fr 0.56fr 1.46fr;
+  gap: 4px;
   pointer-events: none;
 }
 
@@ -117,20 +127,20 @@ canvas {
 
 .hud-pill {
   min-width: 0;
-  min-height: 46px;
-  padding: 6px 8px;
+  min-height: 34px;
+  padding: 4px 6px;
   background:
     linear-gradient(180deg, rgba(255, 248, 214, 0.97), rgba(245, 214, 132, 0.95));
   color: #151515;
-  outline: 2px solid rgba(255, 255, 255, 0.28);
-  outline-offset: -8px;
+  outline: 1px solid rgba(255, 255, 255, 0.28);
+  outline-offset: -5px;
 }
 
 .hud-label {
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   color: #55515a;
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 700;
 }
 
@@ -138,8 +148,8 @@ canvas {
   display: block;
   overflow: hidden;
   color: #151515;
-  font-size: 13px;
-  line-height: 1.15;
+  font-size: 11px;
+  line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -154,32 +164,32 @@ canvas {
   left: 50%;
   top: 50%;
   bottom: auto;
-  max-width: min(86%, 220px);
+  max-width: min(86%, 190px);
   transform: translate(-50%, -100%);
-  padding: 6px 10px;
+  padding: 5px 8px;
   background: #252532;
   color: #fff4c7;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1.25;
   text-align: center;
   outline: 2px solid #f4c542;
-  outline-offset: -7px;
+  outline-offset: -6px;
   white-space: pre-line;
 }
 
 .vehicle-status {
   position: absolute;
   z-index: 4;
-  right: 10px;
-  bottom: 10px;
-  max-width: min(70%, 260px);
-  padding: 7px 10px;
-  border: 4px solid var(--ink);
+  right: 8px;
+  bottom: 8px;
+  max-width: min(70%, 240px);
+  padding: 5px 7px;
+  border: 3px solid var(--ink);
   background: #fff0a8;
   color: #151515;
   box-shadow: 4px 4px 0 #000;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 900;
   line-height: 1.25;
   pointer-events: none;
@@ -188,23 +198,23 @@ canvas {
 .dialogue-box {
   position: absolute;
   z-index: 4;
-  left: 18px;
-  right: 18px;
-  bottom: 18px;
-  min-height: 78px;
-  padding: 14px 18px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  min-height: 54px;
+  padding: 9px 12px;
   background:
     linear-gradient(180deg, rgba(42, 42, 54, 0.96), rgba(22, 22, 29, 0.96));
   color: #fff8d6;
   outline: 2px solid #f4c542;
-  outline-offset: -10px;
+  outline-offset: -7px;
 }
 
 .dialogue-box p {
   margin: 0;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .panel-overlay,
@@ -639,8 +649,16 @@ canvas {
   fill: #7bdff2;
 }
 
+.map-marker-parking rect {
+  fill: #89d0e9;
+}
+
 .map-marker-player rect {
   fill: #d8484f;
+}
+
+.map-marker-companion-return rect {
+  fill: #f28db7;
 }
 
 .map-marker-player text {
@@ -716,6 +734,14 @@ canvas {
 
 .map-key-bus {
   background: #7650b8;
+}
+
+.map-key-parking {
+  background: #89d0e9;
+}
+
+.map-key-companion-return {
+  background: #f28db7;
 }
 
 .character-box {
@@ -954,7 +980,7 @@ canvas {
 
 @media (max-width: 780px) {
   .app-shell {
-    padding: 10px;
+    padding: 6px;
   }
 
   .title-row {
@@ -964,7 +990,7 @@ canvas {
 
   .guide {
     max-width: none;
-    font-size: 12px;
+    font-size: 10px;
   }
 
   .top-bar {
@@ -973,12 +999,12 @@ canvas {
   }
 
   .hud-pill {
-    min-height: 48px;
-    padding: 7px 8px;
+    min-height: 32px;
+    padding: 4px 6px;
   }
 
   .hud-pill strong {
-    font-size: 12px;
+    font-size: 10px;
   }
 
   .hud-objective {
@@ -986,11 +1012,11 @@ canvas {
   }
 
   .dialogue-box {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    min-height: 68px;
-    padding: 10px 12px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    min-height: 48px;
+    padding: 8px 10px;
   }
 
   .dialogue-box p,

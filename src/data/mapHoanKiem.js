@@ -1,5 +1,6 @@
 import { NPC_REWARD } from "../state.js";
 import { repeatDecor, rowApartments, rowHouses } from "./mapHelpers.js";
+import { MO_NEIGHBORHOOD } from "./npcSchedules.js";
 
 export const hoanKiemMap = {
   id: "hoanKiem",
@@ -37,7 +38,9 @@ export const hoanKiemMap = {
     { x: 2200, y: 1320, width: 430, height: 108, kind: "road" },
     { x: 2498, y: 1320, width: 112, height: 390, kind: "road" },
     { x: 2100, y: 1240, width: 244, height: 92, kind: "sidewalk" },
-    { x: 2360, y: 1510, width: 310, height: 112, kind: "sidewalk" }
+    { x: 2360, y: 1510, width: 310, height: 112, kind: "sidewalk" },
+    { x: 2180, y: 1072, width: 612, height: 88, kind: "sidewalk" },
+    { x: 2696, y: 418, width: 96, height: 742, kind: "sidewalk" }
   ],
   water: [
     { x: 1318, y: 294, width: 760, height: 860, label: "Hồ Gươm", kind: "lake" }
@@ -49,6 +52,14 @@ export const hoanKiemMap = {
     { x: 2140, y: 1190, width: 650, height: 560, kind: "paving" },
     { x: 1260, y: 280, width: 56, height: 850, kind: "grass" },
     { x: 2076, y: 300, width: 52, height: 820, kind: "grass" }
+  ],
+  neighborhoods: [MO_NEIGHBORHOOD],
+  collisionBlocks: [
+    { x: 2354, y: 570, width: 62, height: 172 },
+    { x: 2548, y: 570, width: 62, height: 172 },
+    { x: 2416, y: 582, width: 132, height: 102 },
+    { x: 2416, y: 684, width: 44, height: 58 },
+    { x: 2506, y: 684, width: 42, height: 58 }
   ],
   buildings: [
     ...rowHouses({ x: 190, y: 168, count: 4, width: 72, height: 112, signs: ["PHỞ", "CÀ PHÊ", "TẠP HÓA", "BÁNH"] }),
@@ -139,6 +150,7 @@ export const hoanKiemMap = {
       y: 548,
       width: 270,
       height: 194,
+      solid: false,
       range: 90,
       interactionPoint: { x: 2483, y: 792, radius: 50, visibleRange: 240, labelOffsetY: -36 },
       quizId: "nhaThoLon",
@@ -245,9 +257,64 @@ export const hoanKiemMap = {
         intro: "Mình đang ghi chép về bún chả và cà phê trứng. Trả lời hai câu khó hơn một chút nhé.",
         done: "Bạn đã giúp hoàn thiện ghi chép ẩm thực phố cổ."
       }
+    },
+    {
+      id: "teaSellerHoGuom",
+      name: "Cô bán trà đá Bờ Hồ",
+      x: 1170,
+      y: 906,
+      color: "#f7a072",
+      activity: "teaSeller",
+      task: {
+        type: "chat",
+        title: "Trà đá Bờ Hồ",
+        intro: "Cô ngồi bên chiếc bàn thấp, rót trà đá cho khách nghỉ chân. Cô bảo vỉa hè Hà Nội vui nhất là lúc có người ngồi lại trò chuyện một lát.",
+        action: "Ngồi nghỉ một lát",
+        done: "Cô mời bạn một ngụm trà mát và chỉ lối đi bộ quanh Hồ Gươm."
+      }
+    },
+    {
+      id: "xeOmHoanKiem",
+      name: "Chú xe ôm phố cổ",
+      x: 2355,
+      y: 1342,
+      color: "#f2bd45",
+      activity: "xeOm",
+      speech: "Đi xe ôm không cháu, chú lấy rẻ!",
+      task: {
+        type: "chat",
+        title: "Chú xe ôm phố cổ",
+        intro: "Chú ngồi cạnh xe máy, vừa trông phố vừa nhắc rằng các ngõ nhỏ quanh đây thường đông vào giờ cao điểm.",
+        action: "Hỏi đường",
+        done: "Chú chỉ cho bạn lối đi bộ ra bờ hồ và nhắc nhớ để ý các trạm xe buýt."
+      }
     }
   ],
+  companionReturnPoint: {
+    id: "returnMoToChurch",
+    x: 2518,
+    y: 842,
+    radius: 56,
+    visibleRange: 220,
+    labelOffsetY: -34,
+    label: "Nhà thờ Lớn"
+  },
   exits: [
+    {
+      id: "enterNhaThoLon",
+      name: "Cửa chính Nhà thờ Lớn",
+      kind: "churchEntrance",
+      prompt: "E · Vào nhà thờ",
+      x: 2460,
+      y: 710,
+      width: 48,
+      height: 42,
+      interactionPoint: { x: 2484, y: 750, radius: 54, visibleRange: 190, labelOffsetY: -34, label: "Cửa chính" },
+      targetMap: "churchInterior",
+      targetX: 688,
+      targetY: 850,
+      message: "Bạn bước vào bên trong Nhà thờ Lớn Hà Nội."
+    },
     {
       id: "busToBaDinh",
       name: "Xe buýt Ba Đình",

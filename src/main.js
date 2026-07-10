@@ -11,8 +11,13 @@ import { addUnique, placePlayerAtSafeStart } from "./utils/helpers.js";
 import { isPlayerAreaWalkable } from "./utils/collision.js";
 import { drawGame } from "./render/renderGame.js";
 import { updateHud } from "./render/renderUI.js";
+import { initCanvasLayout } from "./systems/canvasLayout.js";
+import { initGameClock, resetGameClockFrame, updateGameClock } from "./systems/gameClock.js";
+import { updateNpcSchedules } from "./systems/npcSchedule.js";
 
-function gameLoop() {
+function gameLoop(timestamp) {
+  updateGameClock(timestamp);
+  updateNpcSchedules();
   movePlayer();
   updateCamera();
   updateNearbyInteractable();
@@ -23,9 +28,13 @@ function gameLoop() {
 function bootGame() {
   setAfterSaveHandler(updateHud);
   setInfoCloseHandler(handlePendingVictory);
+  initGameClock();
   setState(loadGame());
+  resetGameClockFrame();
+  initCanvasLayout();
   player.x = state.player.x;
   player.y = state.player.y;
+  updateNpcSchedules();
   if (!isPlayerAreaWalkable(player.x, player.y)) placePlayerAtSafeStart(state.currentMapId);
   snapCameraToPlayer();
   addUnique(state.visitedMaps, state.currentMapId);
@@ -38,7 +47,7 @@ function bootGame() {
   } else {
     openCharacterSelection({ firstTime: true });
   }
-  gameLoop();
+  requestAnimationFrame(gameLoop);
 }
 
 bootGame();

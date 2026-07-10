@@ -1,37 +1,55 @@
 import { ctx, runtime } from "../state.js";
 import { foodCatalog } from "../data/foods.js";
 import { vehicleCatalog } from "../data/vehicles.js";
-import { isRectVisible } from "../camera.js";
+import { camera, isRectVisible } from "../camera.js";
 import { distanceToRect } from "../utils/collision.js";
 import { getPlayerCenter } from "../utils/helpers.js";
 import { drawPixelRect, drawTextBadge } from "./renderUI.js";
+import { drawStreetLifeNpc, isStreetLifeNpc } from "./renderStreetNpcs.js";
 
 export function drawBackground(map) {
   const width = map.width || 1024;
   const height = map.height || 640;
+  const bounds = getRenderBounds(map, 8);
   ctx.fillStyle = map.background;
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
 
   ctx.fillStyle = "rgba(42, 39, 34, 0.11)";
-  for (let y = 12; y < height; y += 34) {
-    for (let x = (y / 34) % 2 === 0 ? 12 : 30; x < width; x += 52) {
+  const textureBottom = Math.min(height, bounds.y + bounds.height);
+  const textureRight = Math.min(width, bounds.x + bounds.width);
+  const firstTextureRow = Math.max(0, Math.floor((bounds.y - 12) / 34));
+  for (let row = firstTextureRow; ; row += 1) {
+    const y = 12 + row * 34;
+    if (y >= textureBottom) {
+      break;
+    }
+    const firstX = row % 2 === 0 ? 12 : 30;
+    const startX = firstX + Math.max(0, Math.floor((bounds.x - firstX) / 52)) * 52;
+    for (let x = startX; x < textureRight; x += 52) {
       ctx.fillRect(x, y, 10, 3);
       ctx.fillRect(x + 16, y + 8, 5, 3);
     }
   }
 
   ctx.fillStyle = "rgba(255, 246, 220, 0.07)";
-  for (let y = 0; y < height; y += 32) {
-    for (let x = (y / 32) % 2 === 0 ? 0 : 16; x < width; x += 32) {
+  const firstLightRow = Math.max(0, Math.floor(bounds.y / 32));
+  for (let row = firstLightRow; ; row += 1) {
+    const y = row * 32;
+    if (y >= textureBottom) {
+      break;
+    }
+    const firstX = row % 2 === 0 ? 0 : 16;
+    const startX = firstX + Math.max(0, Math.floor((bounds.x - firstX) / 32)) * 32;
+    for (let x = startX; x < textureRight; x += 32) {
       ctx.fillRect(x, y, 4, 4);
     }
   }
 
   ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
-  ctx.fillRect(0, 0, width, 8);
-  ctx.fillRect(0, height - 8, width, 8);
-  ctx.fillRect(0, 0, 8, height);
-  ctx.fillRect(width - 8, 0, 8, height);
+  if (bounds.y === 0) ctx.fillRect(0, 0, width, 8);
+  if (bounds.y + bounds.height >= height) ctx.fillRect(0, height - 8, width, 8);
+  if (bounds.x === 0) ctx.fillRect(0, 0, 8, height);
+  if (bounds.x + bounds.width >= width) ctx.fillRect(width - 8, 0, 8, height);
 }
 
 export function drawGroundPatches(map) {
@@ -70,18 +88,25 @@ function getGroundPatchPalette(kind) {
 }
 
 function drawPatchTilePattern(patch, color) {
+  const bounds = getRenderBounds(patch, 0);
+  const left = Math.max(patch.x, bounds.x);
+  const top = Math.max(patch.y, bounds.y);
+  const right = Math.min(patch.x + patch.width, bounds.x + bounds.width);
+  const bottom = Math.min(patch.y + patch.height, bounds.y + bounds.height);
   ctx.strokeStyle = color;
   ctx.lineWidth = 1;
-  for (let x = patch.x + 24; x < patch.x + patch.width; x += 24) {
+  const firstX = patch.x + 24 + Math.max(0, Math.ceil((left - (patch.x + 24)) / 24)) * 24;
+  for (let x = firstX; x < right; x += 24) {
     ctx.beginPath();
-    ctx.moveTo(x, patch.y);
-    ctx.lineTo(x, patch.y + patch.height);
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
     ctx.stroke();
   }
-  for (let y = patch.y + 24; y < patch.y + patch.height; y += 24) {
+  const firstY = patch.y + 24 + Math.max(0, Math.ceil((top - (patch.y + 24)) / 24)) * 24;
+  for (let y = firstY; y < bottom; y += 24) {
     ctx.beginPath();
-    ctx.moveTo(patch.x, y);
-    ctx.lineTo(patch.x + patch.width, y);
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
     ctx.stroke();
   }
 }
@@ -271,20 +296,47 @@ export function drawRoadLine(zone) {
 }
 
 export function drawTilePattern(zone, color) {
+  const bounds = getRenderBounds(zone, 0);
+  const left = Math.max(zone.x, bounds.x);
+  const top = Math.max(zone.y, bounds.y);
+  const right = Math.min(zone.x + zone.width, bounds.x + bounds.width);
+  const bottom = Math.min(zone.y + zone.height, bounds.y + bounds.height);
   ctx.strokeStyle = color;
   ctx.lineWidth = 1;
-  for (let x = zone.x + 22; x < zone.x + zone.width; x += 22) {
+  const firstX = zone.x + 22 + Math.max(0, Math.ceil((left - (zone.x + 22)) / 22)) * 22;
+  for (let x = firstX; x < right; x += 22) {
     ctx.beginPath();
-    ctx.moveTo(x, zone.y);
-    ctx.lineTo(x, zone.y + zone.height);
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
     ctx.stroke();
   }
-  for (let y = zone.y + 22; y < zone.y + zone.height; y += 22) {
+  const firstY = zone.y + 22 + Math.max(0, Math.ceil((top - (zone.y + 22)) / 22)) * 22;
+  for (let y = firstY; y < bottom; y += 22) {
     ctx.beginPath();
-    ctx.moveTo(zone.x, y);
-    ctx.lineTo(zone.x + zone.width, y);
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
     ctx.stroke();
   }
+}
+
+function getRenderBounds(rect, margin = 0) {
+  const originX = rect.x ?? 0;
+  const originY = rect.y ?? 0;
+  const width = rect.width || 0;
+  const height = rect.height || 0;
+  const maxX = originX + width;
+  const maxY = originY + height;
+  const left = Math.max(originX, Math.floor(camera.x - margin));
+  const top = Math.max(originY, Math.floor(camera.y - margin));
+  const right = Math.min(maxX, Math.ceil(camera.x + camera.width + margin));
+  const bottom = Math.min(maxY, Math.ceil(camera.y + camera.height + margin));
+
+  return {
+    x: left,
+    y: top,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top)
+  };
 }
 
 export function drawBuildings(map) {
@@ -564,6 +616,11 @@ export function drawExits(map) {
       return;
     }
 
+    if (exit.kind === "churchEntrance" || exit.kind === "churchExit") {
+      drawChurchDoorExit(exit);
+      return;
+    }
+
     ctx.fillStyle = "rgba(0,0,0,0.24)";
     ctx.fillRect(exit.x + 5, exit.y + 5, exit.width, exit.height);
     drawPixelRect(exit.x, exit.y, exit.width, exit.height, "#7650b8", "#151515", 4);
@@ -594,6 +651,14 @@ export function drawExits(map) {
   });
 }
 
+function drawChurchDoorExit(exit) {
+  ctx.strokeStyle = "#f2bd45";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(exit.x + 3, exit.y + 3, exit.width - 6, exit.height - 6);
+  ctx.fillStyle = "#fff8d6";
+  ctx.fillRect(exit.x + exit.width / 2 - 3, exit.y + 8, 6, 6);
+}
+
 export function drawNpcs(map) {
   map.npcs.forEach((npc) => {
     const phase = performance.now() / 420 + npc.id.length;
@@ -603,7 +668,11 @@ export function drawNpcs(map) {
       return;
     }
 
-    if (npc.activity === "couple") {
+    if (isStreetLifeNpc(npc)) {
+      const center = getPlayerCenter();
+      const showSpeech = npc.activity === "xeOm" && Math.hypot(center.x - visual.x, center.y - visual.y) <= (npc.bubbleRange || 155);
+      drawStreetLifeNpc(npc, visual.x, visual.y, phase, showSpeech);
+    } else if (npc.activity === "couple") {
       drawCoupleNpc(visual.x, visual.y, phase);
     } else if (npc.activity === "danceGroup") {
       drawDanceGroupNpc(visual.x, visual.y, phase);

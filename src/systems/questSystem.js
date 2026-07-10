@@ -5,6 +5,8 @@ import { formatMoney } from "../utils/format.js";
 import { saveGame } from "../storage.js";
 import { closeChoiceModal, closePanelOverlays, openChoiceModal, showMessage } from "./modal.js";
 
+const TOUR_MAP_IDS = ["hoanKiem", "baDinh", "longBien"];
+
 export function toggleQuestLog() {
   if (!ui.questPanel.classList.contains("hidden")) {
     closeQuestLog();
@@ -53,7 +55,7 @@ export function getQuestObjectives() {
   const foodCount = state.eatenFoods.length;
   const quizCount = getCorrectQuizCount();
   const stampCount = state.inventory.stamps.length;
-  const visitedCount = new Set(state.visitedMaps).size;
+  const visitedCount = getVisitedTourMapCount();
   const firstFiveDone = hasHoGuom && foodCount >= 2 && quizCount >= 4 && stampCount >= 5 && visitedCount >= 3;
 
   return [
@@ -282,7 +284,7 @@ function isObjectiveDone(objective) {
   }
 
   if (objective.type === "visitedMapCount") {
-    return new Set(state.visitedMaps).size >= objective.value;
+    return getVisitedTourMapCount() >= objective.value;
   }
 
   if (objective.type === "quizCount") {
@@ -294,7 +296,7 @@ function isObjectiveDone(objective) {
 
 function getObjectiveProgress(objective) {
   if (objective.type === "visitedMapCount") {
-    const count = new Set(state.visitedMaps).size;
+    const count = getVisitedTourMapCount();
     return `(${Math.min(count, objective.value)}/${objective.value})`;
   }
 
@@ -304,4 +306,8 @@ function getObjectiveProgress(objective) {
   }
 
   return isObjectiveDone(objective) ? "(1/1)" : "(0/1)";
+}
+
+export function getVisitedTourMapCount() {
+  return TOUR_MAP_IDS.filter((mapId) => state.visitedMaps.includes(mapId)).length;
 }

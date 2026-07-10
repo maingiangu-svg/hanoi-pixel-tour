@@ -5,6 +5,11 @@ import { drawBackground, drawBuildings, drawExits, drawGroundPatches, drawLandma
 import { drawDecorations } from "./renderDecorations.js";
 import { drawInteractionPoints } from "./renderInteractionPoints.js";
 import { drawPlayer } from "./renderPlayer.js";
+import { drawParkingAreas } from "./renderParking.js";
+import { drawAmbientVehicles } from "./renderAmbientVehicles.js";
+import { drawChurchInterior } from "./renderChurchInterior.js";
+import { drawScheduledNpcs } from "./renderScheduledNpcs.js";
+import { drawMapTransition } from "../systems/mapTransition.js";
 
 export function drawGame() {
   const map = getCurrentMap();
@@ -12,22 +17,33 @@ export function drawGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
-  drawBackground(map);
-  drawGroundPatches(map);
-  drawWater(map);
-  drawWalkZones(map);
-  drawDecorations(map, "behind");
-  drawBuildings(map);
-  drawLandmarks(map);
-  drawShops(map);
-  drawVehicleShops(map);
-  drawExits(map);
-  drawDecorations(map, "front");
-  drawInteractionPoints(map);
-  drawNpcs(map);
+  if (map.kind === "churchInterior") {
+    drawChurchInterior(map);
+    drawExits(map);
+    drawInteractionPoints(map);
+    drawScheduledNpcs(map);
+  } else {
+    drawBackground(map);
+    drawGroundPatches(map);
+    drawWater(map);
+    drawWalkZones(map);
+    drawDecorations(map, "behind");
+    drawBuildings(map);
+    drawLandmarks(map);
+    drawShops(map);
+    drawVehicleShops(map);
+    drawParkingAreas(map);
+    drawAmbientVehicles(map);
+    drawExits(map);
+    drawDecorations(map, "front");
+    drawInteractionPoints(map);
+    drawNpcs(map);
+    drawScheduledNpcs(map);
+  }
   drawInteractionHighlight();
   drawPlayer();
   ctx.restore();
+  drawMapTransition();
 }
 
 export function drawInteractionHighlight() {

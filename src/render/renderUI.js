@@ -1,10 +1,12 @@
 import { ctx, state, ui } from "../state.js";
 import { getCurrentMap } from "../utils/helpers.js";
 import { formatMoney } from "../utils/format.js";
+import { formatGameTimeHud } from "../utils/gameTime.js";
 import { renderInventory } from "../systems/inventory.js";
 import { renderJournal } from "../systems/journal.js";
 import { getCurrentObjective, renderQuestLog } from "../systems/questSystem.js";
 import { getVehicleData, isRidingVehicle, isVehicleOwned } from "../systems/vehicle.js";
+import { getVehicleParkingLabel, isVehicleParked } from "../systems/parking.js";
 
 export function drawPixelRect(x, y, width, height, fill, stroke, strokeWidth) {
   ctx.fillStyle = fill;
@@ -61,16 +63,21 @@ export function wrapCanvasText(text, maxWidth) {
 
 export function updateHud() {
   ui.hudMapName.textContent = getCurrentMap().name;
+  updateClockHud();
   ui.hudMoney.textContent = formatMoney(state.money);
   ui.hudStamps.textContent = `${state.inventory.stamps.length}`;
   ui.hudFoods.textContent = `${state.eatenFoods.length}`;
-  ui.hudObjective.textContent = getCurrentObjective();
+  ui.hudObjective.textContent = state.moCompanion?.active
+    ? "Đưa Mơ về Nhà thờ Lớn để thời gian tiếp tục."
+    : getCurrentObjective();
 
   if (isVehicleOwned()) {
     const vehicle = getVehicleData();
     ui.vehicleStatus.textContent = isRidingVehicle()
-      ? `Đang lái VinFast · V cất xe`
-      : `${vehicle.name} · V gọi xe`;
+      ? (state.moCompanion?.ridingWithPlayer ? "Đang lái VinFast · Mơ ngồi sau" : "Đang lái VinFast · V cất xe")
+      : isVehicleParked()
+        ? `Xe gửi: ${getVehicleParkingLabel()}`
+        : `${vehicle.name} · V gọi xe`;
     ui.vehicleStatus.classList.remove("hidden");
   } else {
     ui.vehicleStatus.classList.add("hidden");
@@ -86,5 +93,11 @@ export function updateHud() {
 
   if (!ui.journalPanel.classList.contains("hidden")) {
     renderJournal();
+  }
+}
+
+export function updateClockHud() {
+  if (ui.hudClock) {
+    ui.hudClock.textContent = formatGameTimeHud(state.gameTime);
   }
 }

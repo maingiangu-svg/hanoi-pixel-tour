@@ -58,7 +58,7 @@ export function renderMapOverlay() {
   side.className = "map-side";
   side.append(createMapStat("Khu vực", map.name));
   side.append(createMapStat("Vị trí", "Chấm đỏ là bạn"));
-  side.append(createMapStat("Mục tiêu", getCurrentObjective()));
+  side.append(createMapStat("Mục tiêu", getDisplayedObjective()));
   side.append(createLegend());
   side.append(createRouteList(data));
 
@@ -104,6 +104,15 @@ function createMapSvg(map, data) {
   data.vehicleShops.forEach((shop) => {
     addMarker(svg, shop.x, shop.y, transform, "map-marker map-marker-vehicle", "▣", "VinFast");
   });
+
+  data.parkingSpots.forEach((spot) => {
+    addMarker(svg, spot.x, spot.y, transform, "map-marker map-marker-parking", "P", spot.name);
+  });
+
+  if (state.moCompanion?.active && data.companionReturnPoint) {
+    const point = data.companionReturnPoint;
+    addMarker(svg, point.x, point.y, transform, "map-marker map-marker-companion-return", "M", point.name);
+  }
 
   data.landmarks.forEach((landmark) => {
     const discovered = isLandmarkCheckedIn(landmark);
@@ -204,6 +213,12 @@ function isLandmarkCheckedIn(landmark) {
   return Boolean(landmark.stamp && state.inventory.stamps.includes(landmark.stamp));
 }
 
+function getDisplayedObjective() {
+  return state.moCompanion?.active
+    ? "Đưa Mơ về Nhà thờ Lớn để thời gian tiếp tục"
+    : getCurrentObjective();
+}
+
 function createMapStat(label, value) {
   const block = document.createElement("section");
   block.className = "map-stat";
@@ -227,7 +242,9 @@ function createLegend() {
     ["map-key-landmark", "Địa danh"],
     ["map-key-seen", "Đã biết"],
     ["map-key-food", "Ẩm thực"],
-    ["map-key-bus", "Chuyển khu"]
+    ["map-key-bus", "Chuyển khu"],
+    ["map-key-parking", "Bãi gửi xe"],
+    ["map-key-companion-return", "Điểm hẹn của Mơ"]
   ].forEach(([className, text]) => {
     const item = document.createElement("p");
     const swatch = document.createElement("span");

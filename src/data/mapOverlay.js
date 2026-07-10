@@ -37,6 +37,20 @@ export function getMapOverlayData(map) {
       y: shop.interactionPoint?.y || shop.y + shop.height / 2,
       kind: "vehicle"
     })),
+    parkingSpots: (map.parkingSpots || []).map((spot) => ({
+      id: spot.id,
+      name: spot.name,
+      x: spot.interactionPoint?.x || spot.x + spot.width / 2,
+      y: spot.interactionPoint?.y || spot.y + spot.height / 2,
+      kind: "parking"
+    })),
+    companionReturnPoint: map.companionReturnPoint ? {
+      id: map.companionReturnPoint.id,
+      name: "Đưa Mơ về Nhà thờ Lớn",
+      x: map.companionReturnPoint.x,
+      y: map.companionReturnPoint.y,
+      kind: "companionReturn"
+    } : null,
     exits: (map.exits || []).map((exit) => ({
       id: exit.id,
       name: exit.name,

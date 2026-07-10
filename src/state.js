@@ -14,6 +14,7 @@ ctx.imageSmoothingEnabled = false;
 
 export const ui = {
   hudMapName: document.getElementById("hudMapName"),
+  hudClock: document.getElementById("hudClock"),
   hudMoney: document.getElementById("hudMoney"),
   hudStamps: document.getElementById("hudStamps"),
   hudFoods: document.getElementById("hudFoods"),
@@ -63,7 +64,20 @@ export function createDefaultState() {
     currentMapId: "hoanKiem",
     player: { x: 610, y: 1370 },
     profile: { gender: null },
-    vehicle: { owned: false, type: "vinfast-electric", equipped: false },
+    vehicle: { owned: false, type: "vinfast-electric", equipped: false, status: "stored", parkedAt: null },
+    gameTime: { day: 1, hour: 7, minute: 0, totalGameMinutes: 420, paused: false, pauseReasons: [] },
+    npcSchedules: { mo: { currentState: "washing", currentMap: "hoanKiem", x: 0, y: 0 } },
+    moCompanion: {
+      active: false,
+      currentMap: null,
+      x: 0,
+      y: 0,
+      facing: "down",
+      followingPlayer: false,
+      ridingWithPlayer: false,
+      returnDestination: "nhaThoLon",
+      pausedAt: null
+    },
     money: 50000,
     inventory: { foods: [], souvenirs: [], stamps: [], specialItems: [] },
     completedQuizzes: {},
@@ -92,7 +106,17 @@ export const runtime = {
   characterSelectedIndex: 0,
   characterSelection: { allowClose: false, firstTime: false },
   pendingVictory: false,
-  lastSavedAt: 0
+  lastSavedAt: 0,
+  lastGameClockTimestamp: null,
+  lastClockDisplay: "",
+  mapTransitionStartedAt: 0,
+  scheduledMo: null,
+  churchService: null,
+  scheduledCollisionBlocks: [],
+  moCompanionNpc: null,
+  moCompanionHydrated: false,
+  lastVehicleRestrictionId: null,
+  lastVehicleRestrictionAt: 0
 };
 
 export const player = {

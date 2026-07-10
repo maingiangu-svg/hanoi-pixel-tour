@@ -2,10 +2,12 @@ import { player, state, ui } from "../state.js";
 import { VINFAST_VEHICLE_ID, vehicleCatalog } from "../data/vehicles.js";
 import { formatMoney } from "../utils/format.js";
 import { addUnique } from "../utils/helpers.js";
-import { hasVehicleClearance } from "../utils/collision.js";
+import { getVehicleRestrictedZoneAt, hasVehicleClearance } from "../utils/collision.js";
 import { saveGame } from "../storage.js";
 import { closeChoiceModal, isOverlayOpen, openChoiceModal, showMessage } from "./modal.js";
 import { checkSideQuests } from "./questSystem.js";
+import { getVehicleParkingLabel, isVehicleParked, showVehicleRestrictionMessage } from "./parking.js";
+import { syncMoCompanionToPlayer } from "./moCompanion.js";
 
 export function getVehicleData() {
   const vehicleId = state.vehicle?.type || VINFAST_VEHICLE_ID;
@@ -17,7 +19,7 @@ export function isVehicleOwned() {
 }
 
 export function isRidingVehicle() {
-  return Boolean(isVehicleOwned() && state.vehicle.equipped);
+  return Boolean(isVehicleOwned() && state.vehicle.equipped && state.vehicle.status !== "parked");
 }
 
 export function getPlayerMoveSpeed() {
@@ -37,9 +39,20 @@ export function toggleVehicle() {
   }
 
   if (isRidingVehicle()) {
-    state.vehicle.equipped = false;
+    storeVehicle();
     showMessage("Bạn đã cất xe máy điện VinFast.");
     saveGame();
+    return;
+  }
+
+  if (isVehicleParked()) {
+    showMessage(`Xe đang gửi tại ${getVehicleParkingLabel()}. Hãy quay lại bãi gửi xe để lấy xe.`);
+    return;
+  }
+
+  const restrictedZone = getVehicleRestrictedZoneAt(player.x, player.y);
+  if (restrictedZone) {
+    showVehicleRestrictionMessage(restrictedZone);
     return;
   }
 
@@ -48,7 +61,13 @@ export function toggleVehicle() {
     return;
   }
 
-  state.vehicle.equipped = true;
+  state.vehicle = {
+    ...state.vehicle,
+    equipped: true,
+    status: "riding",
+    parkedAt: null
+  };
+  syncMoCompanionToPlayer({ force: true });
   showMessage("Bạn đang lái xe máy điện VinFast. Nhấn V để cất xe.");
   saveGame();
 }
@@ -58,7 +77,7 @@ export function dismountVehicle({ silent = false } = {}) {
     return;
   }
 
-  state.vehicle.equipped = false;
+  storeVehicle();
   if (!silent) {
     showMessage("Bạn đã xuống xe để tiếp tục tương tác.");
   }
@@ -111,7 +130,9 @@ export function buyVehicle(vehicle) {
   state.vehicle = {
     owned: true,
     type: vehicle.id,
-    equipped: false
+    equipped: false,
+    status: "stored",
+    parkedAt: null
   };
   addUnique(state.inventory.specialItems, vehicle.item);
   closeChoiceModal();
@@ -122,4 +143,14 @@ export function buyVehicle(vehicle) {
 
 export function createVehicleShopBody(vehicle) {
   return `${vehicle.name}\nGiá: ${formatMoney(vehicle.price)}\nTiền hiện có: ${formatMoney(state.money)}\nLợi ích: ${vehicle.benefit}`;
+}
+
+function storeVehicle() {
+  state.vehicle = {
+    ...state.vehicle,
+    equipped: false,
+    status: "stored",
+    parkedAt: null
+  };
+  syncMoCompanionToPlayer({ force: true });
 }

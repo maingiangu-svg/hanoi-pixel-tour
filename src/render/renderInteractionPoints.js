@@ -1,9 +1,20 @@
 import { ctx } from "../state.js";
 import { isRectVisible } from "../camera.js";
 import { getVisibleInteractionPoints, isInteractionPointCompleted } from "../systems/interactionPoints.js";
+import { getMoReturnPoint } from "../systems/moCompanion.js";
+import { getPlayerCenter } from "../utils/helpers.js";
 
 export function drawInteractionPoints(map) {
-  getVisibleInteractionPoints(map).forEach((point) => {
+  const points = getVisibleInteractionPoints(map);
+  const moReturnPoint = getMoReturnPoint(map);
+  if (moReturnPoint) {
+    const center = getPlayerCenter();
+    if (Math.hypot(center.x - moReturnPoint.x, center.y - moReturnPoint.y) <= moReturnPoint.visibleRange) {
+      points.push(moReturnPoint);
+    }
+  }
+
+  points.forEach((point) => {
     const rect = { x: point.x - 22, y: point.y - 30, width: 44, height: 52 };
     if (!isRectVisible(rect, 32)) {
       return;
@@ -22,8 +33,23 @@ function drawPixelGlowPoint(point, discovered) {
   const y = Math.round(point.y + bob);
   const size = discovered ? 5 : (pulse > 0 ? 7 : 6);
   const dark = "#151515";
-  const core = discovered ? "#f1d87a" : "#fff36d";
-  const light = discovered ? "#fff3b0" : "#fff8d6";
+  const isParking = point.type === "parking";
+  const isExit = point.type === "exit";
+  const isMoReturn = point.type === "moReturn";
+  const core = isParking
+    ? (discovered ? "#89d0e9" : "#7bdff2")
+    : isExit
+      ? "#cf9cf5"
+      : isMoReturn
+        ? "#f28db7"
+        : (discovered ? "#f1d87a" : "#fff36d");
+  const light = isParking
+    ? "#e1f7ff"
+    : isExit
+      ? "#fff1ff"
+      : isMoReturn
+        ? "#ffe2ee"
+        : (discovered ? "#fff3b0" : "#fff8d6");
   const shadow = discovered ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.28)";
 
   ctx.fillStyle = shadow;

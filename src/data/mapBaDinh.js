@@ -243,6 +243,37 @@ export const baDinhMap = {
         intro: "Chú đang so sánh phở Hà Nội và bánh cuốn. Nếu cháu hiểu kỹ thuật món ăn, thử trả lời hai câu nhé.",
         done: "Chú ghi thêm tên bạn vào trang ghi chú ẩm thực."
       }
+    },
+    {
+      id: "teaSellerBaDinh",
+      name: "Cô trà đá cổng Văn Miếu",
+      x: 454,
+      y: 1664,
+      color: "#f7a072",
+      activity: "teaSeller",
+      task: {
+        type: "chat",
+        title: "Trà đá cổng Văn Miếu",
+        intro: "Cô xếp ghế nhựa thấp bên vỉa hè, vừa pha trà vừa kể rằng khách tham quan thường dừng lại nghỉ trước khi đi qua những lớp cổng Văn Miếu.",
+        action: "Trò chuyện với cô",
+        done: "Cô mỉm cười: Đi chậm một chút thì mới thấy phố và di tích có nhiều chuyện để kể."
+      }
+    },
+    {
+      id: "xeOmBaDinh",
+      name: "Chú xe ôm trục Hùng Vương",
+      x: 2460,
+      y: 1580,
+      color: "#7bdff2",
+      activity: "xeOm",
+      speech: "Cháu đi đâu, chú chở nhé?",
+      task: {
+        type: "chat",
+        title: "Chú xe ôm trục Hùng Vương",
+        intro: "Chú đội mũ bảo hiểm, đứng cạnh xe ở vỉa hè và hay hướng dẫn khách chọn tuyến xe buýt phù hợp để đi giữa các khu tham quan.",
+        action: "Xin gợi ý tuyến đường",
+        done: "Chú bảo: Muốn thong thả thì cứ đi bộ trong khu di tích, ra đường lớn rồi hãy tính tiếp."
+      }
     }
   ],
   exits: [

@@ -3,6 +3,8 @@ import { formatMoney } from "../utils/format.js";
 import { closePanelOverlays } from "./modal.js";
 import { openCharacterSelection } from "./characterSelection.js";
 import { getVehicleData, isRidingVehicle, isVehicleOwned } from "./vehicle.js";
+import { getVehicleParkingLabel, isVehicleParked } from "./parking.js";
+import { getVisitedTourMapCount } from "./questSystem.js";
 
 export function toggleInventory() {
   if (!ui.inventoryPanel.classList.contains("hidden")) {
@@ -25,7 +27,7 @@ export function renderInventory() {
   const stats = document.createElement("div");
   stats.className = "panel-grid";
   stats.appendChild(createStatCard("Tiền", formatMoney(state.money)));
-  stats.appendChild(createStatCard("Khu đã ghé", `${state.visitedMaps.length}/3`));
+  stats.appendChild(createStatCard("Khu đã ghé", `${getVisitedTourMapCount()}/3`));
   stats.appendChild(createStatCard("Nhân vật", getGenderLabel()));
   stats.appendChild(createStatCard("Phương tiện", getVehicleLabel()));
   ui.inventoryContent.appendChild(stats);
@@ -102,5 +104,13 @@ function getVehicleLabel() {
   }
 
   const vehicle = getVehicleData();
-  return isRidingVehicle() ? `${vehicle.name} (đang lái)` : `${vehicle.name} (đang cất)`;
+  if (isRidingVehicle()) {
+    return `${vehicle.name} (đang lái)`;
+  }
+
+  if (isVehicleParked()) {
+    return `${vehicle.name} (gửi tại ${getVehicleParkingLabel()})`;
+  }
+
+  return `${vehicle.name} (đang cất)`;
 }

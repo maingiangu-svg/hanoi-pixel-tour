@@ -1,8 +1,9 @@
 import { keys, player, state } from "../state.js";
-import { isPlayerAreaWalkable, isVehicleAreaWalkable } from "../utils/collision.js";
+import { getVehicleRestrictedZoneAt, isPlayerAreaWalkable, isVehicleAreaWalkable } from "../utils/collision.js";
 import { isOverlayOpen } from "./modal.js";
 import { saveGameThrottled } from "../storage.js";
 import { getPlayerMoveSpeed, isRidingVehicle } from "./vehicle.js";
+import { showVehicleRestrictionMessage } from "./parking.js";
 
 export function movePlayer() {
   if (isOverlayOpen()) {
@@ -53,5 +54,7 @@ export function tryMove(dx, dy) {
     player.y = nextY;
     state.player.x = Math.round(player.x);
     state.player.y = Math.round(player.y);
+  } else if (isRidingVehicle()) {
+    showVehicleRestrictionMessage(getVehicleRestrictedZoneAt(nextX, nextY));
   }
 }

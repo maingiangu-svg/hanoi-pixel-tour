@@ -1,4 +1,4 @@
-import { player } from "../state.js";
+import { player, runtime } from "../state.js";
 import { getCurrentMap } from "./helpers.js";
 
 export function isPlayerAreaWalkable(x, y) {
@@ -7,6 +7,10 @@ export function isPlayerAreaWalkable(x, y) {
 
 export function isVehicleAreaWalkable(x, y) {
   return isFeetAreaWalkable(getVehicleFeet(x, y), { vehicle: true });
+}
+
+export function getVehicleRestrictedZoneAt(x, y) {
+  return getVehicleRestrictedZoneForFeet(getVehicleFeet(x, y));
 }
 
 export function hasVehicleClearance(x, y) {
@@ -41,10 +45,15 @@ function isFeetAreaWalkable(feet, options = {}) {
   ];
 
   const allowed = points.every((point) =>
-    map.walkZones.some((zone) => pointInRect(point.x, point.y, zone))
+    map.walkZones.some((zone) => pointInRect(point.x, point.y, zone) &&
+      (!options.vehicle || isVehicleZoneAllowed(zone)))
   );
 
   if (!allowed) {
+    return false;
+  }
+
+  if (options.vehicle && getVehicleRestrictedZoneForFeet(feet, map)) {
     return false;
   }
 
@@ -53,6 +62,26 @@ function isFeetAreaWalkable(feet, options = {}) {
     : getSolidObjects();
 
   return !blockers.some((solid) => rectsOverlap(feet, shrinkRect(solid, 2)));
+}
+
+function getVehicleRestrictedZoneForFeet(feet, map = getCurrentMap()) {
+  return (map.vehicleRestrictedZones || []).find((zone) => rectsOverlap(feet, zone)) || null;
+}
+
+function isVehicleZoneAllowed(zone) {
+  if (zone.vehicleAllowed === false) {
+    return false;
+  }
+
+  if (zone.vehicleAllowed === true) {
+    return true;
+  }
+
+  if (["road", "bridge", "plaza", "courtyard"].includes(zone.kind)) {
+    return true;
+  }
+
+  return zone.kind === "sidewalk" && Math.min(zone.width, zone.height) >= 90;
 }
 
 export function getPlayerFeet(x = player.x, y = player.y) {
@@ -80,7 +109,8 @@ export function getSolidObjects() {
     ...map.shops,
     ...(map.vehicleShops || []),
     ...(map.collisionBlocks || []),
-    ...map.landmarks.filter((landmark) => landmark.solid !== false)
+    ...map.landmarks.filter((landmark) => landmark.solid !== false),
+    ...(runtime.scheduledCollisionBlocks || []).filter((block) => !block.mapId || block.mapId === map.id)
   ];
 }
 

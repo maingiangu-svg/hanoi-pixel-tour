@@ -7,12 +7,17 @@ import { addUnique, findLandmark, findNpcTask, getCurrentMap, getPlayerCenter, g
 import { formatMoney } from "../utils/format.js";
 import { saveGame } from "../storage.js";
 import { discoverLandmark } from "./journal.js";
-import { distanceToInteractionPoint, getLandmarkInteractionPoints, getVehicleShopInteractionPoints } from "./interactionPoints.js";
+import { distanceToInteractionPoint, getExitInteractionPoints, getLandmarkInteractionPoints, getParkingInteractionPoints, getVehicleShopInteractionPoints } from "./interactionPoints.js";
 import { openQuiz } from "./quiz.js";
 import { openShop } from "./shop.js";
 import { dismountVehicle, isRidingVehicle, openVehicleShop } from "./vehicle.js";
 import { checkAreaQuests, checkVictory } from "./questSystem.js";
 import { closeChoiceModal, closeInfoModal, isOverlayOpen, openChoiceModal, openLandmarkInfoPanel, showMessage } from "./modal.js";
+import { screenToFramePosition } from "./canvasLayout.js";
+import { openParkingMenu } from "./parking.js";
+import { getScheduledNpcDialogue, getScheduledNpcsForMap, updateNpcSchedules } from "./npcSchedule.js";
+import { beginMapTransition } from "./mapTransition.js";
+import { canInviteMo, endMoHangout, getMoCompanionDialogue, getMoInvitationBlockedMessage, getMoReturnPoint, isMoCompanionActive, isNearMoReturnPoint, startMoHangout, syncMoCompanionToPlayer } from "./moCompanion.js";
 
 export function updateNearbyInteractable() {
   if (isOverlayOpen()) {
@@ -33,7 +38,8 @@ export function updateNearbyInteractable() {
     .filter((item) => item.distance <= item.range)
     .sort((a, b) => a.distance - b.distance || a.priority - b.priority);
 
-  runtime.nearbyInteractable = interactables[0] || null;
+  const nonCompanionInteractables = interactables.filter((item) => !item.object?.companion);
+  runtime.nearbyInteractable = nonCompanionInteractables[0] || interactables[0] || null;
 
   if (runtime.nearbyInteractable) {
     ui.nearbyHint.textContent = getInteractionPrompt(runtime.nearbyInteractable);
@@ -43,8 +49,9 @@ export function updateNearbyInteractable() {
         runtime.nearbyInteractable.point.y + runtime.nearbyInteractable.point.labelOffsetY
       )
       : worldToScreen(player.x + player.width / 2, player.y - 6);
-    ui.nearbyHint.style.left = `${Math.round(screen.x)}px`;
-    ui.nearbyHint.style.top = `${Math.round(screen.y)}px`;
+    const display = screenToFramePosition(screen);
+    ui.nearbyHint.style.left = `${Math.round(display.x)}px`;
+    ui.nearbyHint.style.top = `${Math.round(display.y)}px`;
     ui.nearbyHint.style.bottom = "auto";
     ui.nearbyHint.classList.remove("hidden");
   } else {
@@ -54,8 +61,33 @@ export function updateNearbyInteractable() {
 
 export function getInteractables() {
   const map = getCurrentMap();
+  const exitPoints = getExitInteractionPoints(map);
+  const moReturnPoint = getMoReturnPoint(map);
   return [
-    ...map.exits.map((object) => ({ type: "exit", object, priority: 1, range: 76 })),
+    ...(moReturnPoint ? [{
+      type: "moReturn",
+      object: {
+        id: moReturnPoint.id,
+        name: "Nhà thờ Lớn Hà Nội",
+        x: moReturnPoint.x - 8,
+        y: moReturnPoint.y - 8,
+        width: 16,
+        height: 16
+      },
+      point: moReturnPoint,
+      priority: 0,
+      range: moReturnPoint.radius
+    }] : []),
+    ...map.exits.map((object) => {
+      const point = exitPoints.find((candidate) => candidate.exit === object);
+      return {
+        type: "exit",
+        object,
+        point,
+        priority: 1,
+        range: point ? point.radius : 76
+      };
+    }),
     ...map.npcs.map((object) => ({
       type: "npc",
       object: { ...object, width: 24, height: 46 },
@@ -63,6 +95,15 @@ export function getInteractables() {
       priority: 2,
       range: 78
     })),
+    ...getScheduledNpcsForMap(map)
+      .filter((npc) => npc.interactable)
+      .map((npc) => ({
+        type: "scheduledNpc",
+        object: { ...npc, width: npc.width || 24, height: npc.height || 46 },
+        source: npc,
+        priority: npc.companion ? 5 : 2,
+        range: npc.companion ? 52 : 72
+      })),
     ...map.shops.map((object) => ({
       type: "shop",
       object: { ...object, name: foodCatalog[object.foodId].name },
@@ -83,6 +124,21 @@ export function getInteractables() {
       source: point.shop,
       point,
       priority: 3,
+      range: point.radius
+    })),
+    ...getParkingInteractionPoints(map).map((point) => ({
+      type: "parking",
+      object: {
+        id: point.id,
+        name: point.spot.name,
+        x: point.x - 8,
+        y: point.y - 8,
+        width: 16,
+        height: 16
+      },
+      source: point.spot,
+      point,
+      priority: 2,
       range: point.radius
     })),
     ...getLandmarkInteractionPoints(map).map((point) => ({
@@ -108,10 +164,16 @@ export function getInteractionPrompt(item) {
     if (item.type === "exit") {
       return "E · Cất xe và chuyển khu";
     }
+    if (item.type === "parking") {
+      return "E · Gửi xe";
+    }
     return "[V] Xuống xe để tương tác";
   }
 
   if (item.type === "exit") {
+    if (item.object.prompt) {
+      return item.object.prompt;
+    }
     const targetName = maps[item.object.targetMap].name;
     if (item.object.kind === "bus") {
       return `E · Xe buýt đến ${targetName}`;
@@ -119,16 +181,24 @@ export function getInteractionPrompt(item) {
     return `E · Đi đến ${targetName}`;
   }
 
+  if (item.type === "moReturn") {
+    return "E · Đưa Mơ về";
+  }
+
   if (item.type === "shop") {
     return `E · Ghé ${item.object.name}`;
   }
 
-  if (item.type === "npc") {
+  if (item.type === "npc" || item.type === "scheduledNpc") {
     return `E · Nói chuyện với ${item.object.name}`;
   }
 
   if (item.type === "vehicleShop") {
     return "[E] Xem xe VinFast";
+  }
+
+  if (item.type === "parking") {
+    return "E · Bãi gửi xe";
   }
 
   return `${item.source ? item.source.name : item.object.name}\n[E] Khám phá`;
@@ -146,7 +216,7 @@ export function interact() {
     return;
   }
 
-  if (isRidingVehicle() && runtime.nearbyInteractable.type !== "exit") {
+  if (isRidingVehicle() && !["exit", "parking"].includes(runtime.nearbyInteractable.type)) {
     showMessage("Nhấn V để xuống xe trước khi tương tác.");
     return;
   }
@@ -163,8 +233,20 @@ export function interact() {
     openVehicleShop(runtime.nearbyInteractable.source);
   }
 
+  if (runtime.nearbyInteractable.type === "parking") {
+    openParkingMenu(runtime.nearbyInteractable.source);
+  }
+
+  if (runtime.nearbyInteractable.type === "moReturn") {
+    openMoReturnConfirmation();
+  }
+
   if (runtime.nearbyInteractable.type === "npc") {
     handleNpc(runtime.nearbyInteractable.source);
+  }
+
+  if (runtime.nearbyInteractable.type === "scheduledNpc") {
+    handleScheduledNpc(runtime.nearbyInteractable.source);
   }
 
   if (runtime.nearbyInteractable.type === "landmark") {
@@ -202,7 +284,10 @@ export function travelToMap(exit) {
     placePlayerAtSafeStart(exit.targetMap);
   }
 
+  syncMoCompanionToPlayer({ force: true });
+
   snapCameraToPlayer();
+  beginMapTransition();
   showMessage(exit.message);
   saveGame();
   checkVictory();
@@ -262,7 +347,12 @@ export function handleLandmark(landmark) {
 export function handleNpc(npc) {
   const task = npc.task;
 
-  if (state.completedTasks[task.taskId]) {
+  if (!task) {
+    showMessage(`${npc.name}: Chúc bạn có một chuyến đi vui vẻ.`);
+    return;
+  }
+
+  if (task.taskId && state.completedTasks[task.taskId]) {
     showMessage(task.done || `${npc.name}: Cảm ơn bạn nhé!`);
     return;
   }
@@ -298,6 +388,25 @@ export function handleNpc(npc) {
           onClick: () => {
             completeNpcTask(task);
             closeChoiceModal();
+          }
+        },
+        { label: "Rời đi", onClick: closeChoiceModal }
+      ]
+    });
+  }
+
+  if (task.type === "chat") {
+    openChoiceModal({
+      tag: "Chuyện phố Hà Nội",
+      title: task.title || npc.name,
+      body: task.intro,
+      actions: [
+        {
+          label: task.action || "Trò chuyện",
+          className: "primary-choice",
+          onClick: () => {
+            closeChoiceModal();
+            showMessage(task.done || `${npc.name}: Cảm ơn bạn đã ghé lại.`);
           }
         },
         { label: "Rời đi", onClick: closeChoiceModal }
@@ -356,6 +465,159 @@ export function handleNpc(npc) {
       ]
     });
   }
+}
+
+export function handleScheduledNpc(npc) {
+  if (npc.id === "mo") {
+    handleMoInteraction(npc);
+    return;
+  }
+
+  const dialogue = getScheduledNpcDialogue(npc);
+  if (npc.id === "chaXu") {
+    showMessage(dialogue);
+    return;
+  }
+
+  openChoiceModal({
+    tag: "Chuyện ở sân nhỏ",
+    title: npc.name,
+    body: dialogue,
+    actions: [
+      {
+        label: "Trò chuyện",
+        className: "primary-choice",
+        onClick: () => {
+          closeChoiceModal();
+          showMessage(dialogue);
+        }
+      },
+      { label: "Rời đi", onClick: closeChoiceModal }
+    ]
+  });
+}
+
+function handleMoInteraction(npc) {
+  if (isMoCompanionActive()) {
+    openMoCompanionMenu();
+    return;
+  }
+
+  if (!canInviteMo(npc)) {
+    showMessage(getMoInvitationBlockedMessage(npc));
+    return;
+  }
+
+  const dialogue = getScheduledNpcDialogue(npc);
+  openChoiceModal({
+    tag: "Mơ",
+    title: "Mơ",
+    body: dialogue,
+    actions: [
+      {
+        label: "Nói chuyện",
+        className: "primary-choice",
+        onClick: () => {
+          closeChoiceModal();
+          showMessage(dialogue);
+        }
+      },
+      {
+        label: "Mời Mơ đi chơi",
+        onClick: () => {
+          closeChoiceModal();
+          openMoHangoutConfirmation(npc);
+        }
+      },
+      { label: "Rời đi", onClick: closeChoiceModal }
+    ]
+  });
+}
+
+function openMoHangoutConfirmation(npc) {
+  openChoiceModal({
+    tag: "Mơ",
+    title: "Đi chơi cùng Mơ",
+    body: "Được thôi, mình đi cùng bạn nhé. Nhưng nhớ đưa mình về Nhà thờ Lớn nhé!",
+    actions: [
+      {
+        label: "Đi thôi",
+        className: "primary-choice",
+        onClick: () => {
+          const currentMo = runtime.scheduledMo || npc;
+          if (!canInviteMo(currentMo) || !startMoHangout()) {
+            closeChoiceModal();
+            showMessage(getMoInvitationBlockedMessage(currentMo));
+            return;
+          }
+
+          closeChoiceModal();
+          updateNpcSchedules();
+          saveGame();
+          showMessage("Mơ đang đi cùng bạn. Thời gian đã tạm dừng - hãy đưa Mơ về Nhà thờ Lớn để tiếp tục.");
+        }
+      },
+      { label: "Để hôm khác", onClick: closeChoiceModal }
+    ]
+  });
+}
+
+function openMoCompanionMenu() {
+  const dialogue = getMoCompanionDialogue();
+  openChoiceModal({
+    tag: "Đi chơi cùng Mơ",
+    title: "Mơ",
+    body: dialogue,
+    actions: [
+      {
+        label: "Nói chuyện",
+        className: "primary-choice",
+        onClick: () => {
+          closeChoiceModal();
+          showMessage(dialogue);
+        }
+      },
+      {
+        label: "Đưa Mơ về Nhà thờ",
+        onClick: () => {
+          closeChoiceModal();
+          if (isNearMoReturnPoint()) {
+            openMoReturnConfirmation();
+          } else {
+            showMessage("Hãy đưa Mơ tới cửa Nhà thờ Lớn Hà Nội để thời gian tiếp tục.");
+          }
+        }
+      },
+      { label: "Tiếp tục đi chơi", onClick: closeChoiceModal }
+    ]
+  });
+}
+
+function openMoReturnConfirmation() {
+  if (!isNearMoReturnPoint()) {
+    showMessage("Hãy đến khoảng sân trước cửa Nhà thờ Lớn để đưa Mơ về.");
+    return;
+  }
+
+  openChoiceModal({
+    tag: "Đi chơi cùng Mơ",
+    title: "Đưa Mơ về Nhà thờ",
+    body: "Bạn muốn kết thúc buổi đi chơi và đưa Mơ về Nhà thờ?",
+    actions: [
+      {
+        label: "Đưa Mơ về",
+        className: "primary-choice",
+        onClick: () => {
+          closeChoiceModal();
+          endMoHangout();
+          updateNpcSchedules();
+          saveGame();
+          showMessage("Bạn đã đưa Mơ về Nhà thờ Lớn. Thời gian tiếp tục.");
+        }
+      },
+      { label: "Đi chơi thêm", onClick: closeChoiceModal }
+    ]
+  });
 }
 
 export function completeNpcTask(task) {

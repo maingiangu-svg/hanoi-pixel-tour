@@ -46,7 +46,8 @@ export const longBienMap = {
     { kind: "tubeHouse", x: 1040, y: 780, width: 102, height: 118, color: "#e7a768", roof: "#88443d", door: "#5d3b28" },
     { kind: "cafeFront", x: 1136, y: 760, width: 118, height: 92, color: "#d7a65b", roof: "#88443d", sign: "TRÀ ĐÁ" },
     { kind: "cafeFront", x: 1520, y: 1168, width: 120, height: 92, color: "#d8b35f", roof: "#315f8f", sign: "CỐM" },
-    { kind: "wall", x: 1700, y: 0, width: 42, height: 1800, color: "#c28d54" }
+    { kind: "wall", x: 1700, y: 0, width: 42, height: 500, color: "#c28d54" },
+    { kind: "wall", x: 1700, y: 730, width: 42, height: 1070, color: "#c28d54" }
   ],
   landmarks: [
     {
@@ -106,6 +107,8 @@ export const longBienMap = {
       x: 1350,
       y: 1254,
       color: "#ffd15f",
+      activity: "xeOm",
+      speech: "Lên xe đi cháu, chú chỉ đường luôn!",
       task: {
         type: "delivery",
         taskId: "deliveryDongXuan",
@@ -182,6 +185,37 @@ export const longBienMap = {
         souvenir: "Mẩu chuyện vỉa hè Long Biên",
         intro: "Bác ngồi bên quán trà đá, kể về phở gánh và vỉa hè. Cháu thử trả lời hai câu để xem có hiểu nhịp phố không nhé.",
         done: "Bác gật gù: Biết ăn cũng là biết nhìn phố."
+      }
+    },
+    {
+      id: "teaSellerLongBien",
+      name: "Cô trà đá ven chợ",
+      x: 660,
+      y: 1080,
+      color: "#f7a072",
+      activity: "teaSeller",
+      task: {
+        type: "chat",
+        title: "Trà đá ven chợ",
+        intro: "Trên bàn nhỏ có ấm trà, chai nước và vài chiếc cốc. Cô bảo người đi chợ hay ghé đây ngồi nghỉ, nghe tiếng xe và tiếng rao qua lại.",
+        action: "Ngồi nghe chuyện chợ",
+        done: "Cô kể thêm vài chuyện buôn bán quanh Đồng Xuân rồi nhắc bạn giữ lối đi thông thoáng."
+      }
+    },
+    {
+      id: "xeOmDongXuan",
+      name: "Chú xe ôm đầu chợ",
+      x: 382,
+      y: 700,
+      color: "#f2bd45",
+      activity: "xeOm",
+      speech: "Cần xe ôm không? Giá mềm thôi!",
+      task: {
+        type: "chat",
+        title: "Chú xe ôm đầu chợ",
+        intro: "Chú dừng xe ở đầu phố để khách dễ nhận ra. Chú nói khu chợ đông thì nên gửi xe rồi đi bộ cho thong thả.",
+        action: "Hỏi đường vào chợ",
+        done: "Chú chỉ tay về phía bãi gửi xe và nhắc bạn đi bộ vào chợ sẽ dễ quan sát hơn."
       }
     }
   ],
