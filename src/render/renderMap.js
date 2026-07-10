@@ -1,35 +1,151 @@
-import { ctx, WORLD_HEIGHT, WORLD_WIDTH } from "../state.js";
+import { ctx, runtime } from "../state.js";
 import { foodCatalog } from "../data/foods.js";
+import { isRectVisible } from "../camera.js";
+import { distanceToRect } from "../utils/collision.js";
+import { getPlayerCenter } from "../utils/helpers.js";
 import { drawPixelRect, drawTextBadge } from "./renderUI.js";
 
 export function drawBackground(map) {
+  const width = map.width || 1024;
+  const height = map.height || 640;
   ctx.fillStyle = map.background;
-  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+  ctx.fillRect(0, 0, width, height);
 
-  ctx.fillStyle = "rgba(18, 55, 31, 0.13)";
-  for (let y = 12; y < WORLD_HEIGHT; y += 34) {
-    for (let x = (y / 34) % 2 === 0 ? 12 : 30; x < WORLD_WIDTH; x += 52) {
-      ctx.fillRect(x, y, 8, 3);
-      ctx.fillRect(x + 12, y + 7, 4, 3);
+  ctx.fillStyle = "rgba(42, 39, 34, 0.11)";
+  for (let y = 12; y < height; y += 34) {
+    for (let x = (y / 34) % 2 === 0 ? 12 : 30; x < width; x += 52) {
+      ctx.fillRect(x, y, 10, 3);
+      ctx.fillRect(x + 16, y + 8, 5, 3);
     }
   }
 
-  ctx.fillStyle = "rgba(255, 255, 255, 0.07)";
-  for (let y = 0; y < WORLD_HEIGHT; y += 32) {
-    for (let x = (y / 32) % 2 === 0 ? 0 : 16; x < WORLD_WIDTH; x += 32) {
+  ctx.fillStyle = "rgba(255, 246, 220, 0.07)";
+  for (let y = 0; y < height; y += 32) {
+    for (let x = (y / 32) % 2 === 0 ? 0 : 16; x < width; x += 32) {
       ctx.fillRect(x, y, 4, 4);
     }
   }
 
   ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
-  ctx.fillRect(0, 0, WORLD_WIDTH, 8);
-  ctx.fillRect(0, WORLD_HEIGHT - 8, WORLD_WIDTH, 8);
-  ctx.fillRect(0, 0, 8, WORLD_HEIGHT);
-  ctx.fillRect(WORLD_WIDTH - 8, 0, 8, WORLD_HEIGHT);
+  ctx.fillRect(0, 0, width, 8);
+  ctx.fillRect(0, height - 8, width, 8);
+  ctx.fillRect(0, 0, 8, height);
+  ctx.fillRect(width - 8, 0, 8, height);
+}
+
+export function drawGroundPatches(map) {
+  (map.groundPatches || []).forEach((patch) => {
+    if (!isRectVisible(patch, 100)) {
+      return;
+    }
+
+    const palette = getGroundPatchPalette(patch.kind);
+    drawPixelRect(patch.x, patch.y, patch.width, patch.height, palette.fill, palette.stroke, 2);
+    drawPatchTilePattern(patch, palette.line);
+
+    ctx.fillStyle = palette.light;
+    ctx.fillRect(patch.x + 8, patch.y + 8, patch.width - 16, 3);
+    ctx.fillRect(patch.x + 8, patch.y + 8, 3, patch.height - 16);
+  });
+}
+
+function getGroundPatchPalette(kind) {
+  if (kind === "asphalt") {
+    return { fill: "#383c43", stroke: "#202329", line: "rgba(255,255,255,0.10)", light: "rgba(255,255,255,0.10)" };
+  }
+  if (kind === "brick") {
+    return { fill: "#b97b55", stroke: "#6a3f2c", line: "rgba(255, 230, 172, 0.22)", light: "rgba(255, 232, 176, 0.24)" };
+  }
+  if (kind === "grass") {
+    return { fill: "#5e8f54", stroke: "#3d6439", line: "rgba(220, 238, 166, 0.18)", light: "rgba(238, 246, 190, 0.18)" };
+  }
+  if (kind === "plaza") {
+    return { fill: "#c8ab68", stroke: "#7e6539", line: "rgba(255, 240, 180, 0.28)", light: "rgba(255, 240, 192, 0.24)" };
+  }
+  if (kind === "embankment") {
+    return { fill: "#a89d85", stroke: "#5f5b50", line: "rgba(245, 239, 219, 0.24)", light: "rgba(255,255,255,0.18)" };
+  }
+  return { fill: "#b9c0b6", stroke: "#747d75", line: "rgba(238, 241, 229, 0.28)", light: "rgba(255,255,255,0.20)" };
+}
+
+function drawPatchTilePattern(patch, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  for (let x = patch.x + 24; x < patch.x + patch.width; x += 24) {
+    ctx.beginPath();
+    ctx.moveTo(x, patch.y);
+    ctx.lineTo(x, patch.y + patch.height);
+    ctx.stroke();
+  }
+  for (let y = patch.y + 24; y < patch.y + patch.height; y += 24) {
+    ctx.beginPath();
+    ctx.moveTo(patch.x, y);
+    ctx.lineTo(patch.x + patch.width, y);
+    ctx.stroke();
+  }
+}
+
+function shouldShowLabel(object, maxDistance = 160) {
+  const activeObject = runtime.nearbyInteractable &&
+    (runtime.nearbyInteractable.source || runtime.nearbyInteractable.object);
+
+  if (activeObject && isSameMapObject(activeObject, object)) {
+    return true;
+  }
+
+  if (runtime.nearbyInteractable) {
+    return false;
+  }
+
+  const pointDistance = getNearestObjectPointDistance(object);
+  if (pointDistance !== null) {
+    return pointDistance <= Math.min(maxDistance, getObjectLabelRange(object));
+  }
+
+  return distanceToRect(getPlayerCenter(), object) <= maxDistance;
+}
+
+function getNearestObjectPointDistance(object) {
+  const points = object.interactionPoints || (object.interactionPoint ? [object.interactionPoint] : []);
+  if (!points.length) {
+    return null;
+  }
+
+  const center = getPlayerCenter();
+  return Math.min(...points.map((point) => Math.hypot(center.x - point.x, center.y - point.y)));
+}
+
+function getObjectLabelRange(object) {
+  const points = object.interactionPoints || (object.interactionPoint ? [object.interactionPoint] : []);
+  if (!points.length) {
+    return 64;
+  }
+
+  return Math.max(...points.map((point) => (point.radius || 48) + 16));
+}
+
+function isSameMapObject(a, b) {
+  if (!a || !b) {
+    return false;
+  }
+  if (a.id && b.id) {
+    return a.id === b.id;
+  }
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+function drawNearbyLabel(object, text, centerX, centerY, maxWidth, fill, distance = 170) {
+  if (shouldShowLabel(object, distance)) {
+    drawTextBadge(text, centerX, centerY, maxWidth, fill);
+  }
 }
 
 export function drawWater(map) {
   map.water.forEach((water) => {
+    if (!isRectVisible(water, 80)) {
+      return;
+    }
+
     ctx.fillStyle = "rgba(0,0,0,0.22)";
     ctx.fillRect(water.x + 7, water.y + 7, water.width, water.height);
     drawPixelRect(water.x, water.y, water.width, water.height, "#237ab6", "#0d4d7a", 5);
@@ -38,6 +154,13 @@ export function drawWater(map) {
     ctx.fillRect(water.x + 7, water.y + 7, water.width - 14, water.height - 14);
     ctx.fillStyle = "#3fb0de";
     ctx.fillRect(water.x + 14, water.y + 14, water.width - 28, water.height - 28);
+    if (water.kind === "lake") {
+      ctx.fillStyle = map.background;
+      ctx.fillRect(water.x, water.y, 72, 82);
+      ctx.fillRect(water.x + water.width - 88, water.y + 12, 88, 74);
+      ctx.fillRect(water.x + 18, water.y + water.height - 92, 104, 92);
+      ctx.fillRect(water.x + water.width - 118, water.y + water.height - 86, 118, 86);
+    }
 
     ctx.fillStyle = "#85d9ef";
     for (let y = water.y + 18; y < water.y + water.height - 8; y += 30) {
@@ -58,14 +181,18 @@ export function drawWater(map) {
       ctx.fillRect(water.x + water.width - 1, y, 5, 13);
     }
 
-    if (water.label) {
-      drawTextBadge(water.label, water.x + water.width / 2, water.y + 28, 128, "#18547f");
+    if (water.label && distanceToRect(getPlayerCenter(), water) <= 190) {
+      drawTextBadge(water.label, water.x + water.width / 2, water.y + 38, 128, "#18547f");
     }
   });
 }
 
 export function drawWalkZones(map) {
   map.walkZones.forEach((zone) => {
+    if (!isRectVisible(zone, 80)) {
+      return;
+    }
+
     ctx.fillStyle = "rgba(0,0,0,0.14)";
     ctx.fillRect(zone.x + 5, zone.y + 5, zone.width, zone.height);
 
@@ -90,6 +217,20 @@ export function drawWalkZones(map) {
     if (zone.kind === "plaza") {
       drawPixelRect(zone.x, zone.y, zone.width, zone.height, "#d5bd73", "#907642", 3);
       drawTilePattern(zone, "#ead792");
+    }
+
+    if (zone.kind === "courtyard") {
+      drawPixelRect(zone.x, zone.y, zone.width, zone.height, "#cfae68", "#8d7040", 3);
+      drawTilePattern(zone, "#e8cf8a");
+      ctx.fillStyle = "rgba(92, 92, 54, 0.15)";
+      for (let y = zone.y + 16; y < zone.y + zone.height - 12; y += 62) {
+        ctx.fillRect(zone.x + 16, y, zone.width - 32, 4);
+      }
+    }
+
+    if (zone.kind === "path") {
+      drawPixelRect(zone.x, zone.y, zone.width, zone.height, "#d9c07a", "#957843", 3);
+      drawTilePattern(zone, "#eadc9e");
     }
 
     if (zone.kind === "bridge") {
@@ -147,6 +288,35 @@ export function drawTilePattern(zone, color) {
 
 export function drawBuildings(map) {
   map.buildings.forEach((building) => {
+    if (!isRectVisible(building, 100)) {
+      return;
+    }
+
+    if (building.kind === "wall") {
+      drawWall(building);
+      return;
+    }
+
+    if (building.kind === "admin") {
+      drawAdminBuilding(building);
+      return;
+    }
+
+    if (building.kind === "apartment" || building.kind === "collective") {
+      drawApartmentBlock(building);
+      return;
+    }
+
+    if (building.kind === "cafeFront") {
+      drawCafeFront(building);
+      return;
+    }
+
+    if (building.kind === "marketHall") {
+      drawMarket(building);
+      return;
+    }
+
     ctx.fillStyle = "rgba(0,0,0,0.22)";
     ctx.fillRect(building.x + 6, building.y + 6, building.width, building.height);
     drawPixelRect(building.x, building.y, building.width, building.height, building.color, "#1f2024", 3);
@@ -165,18 +335,118 @@ export function drawBuildings(map) {
 
     ctx.fillStyle = "#49362e";
     ctx.fillRect(building.x + building.width / 2 - 7, building.y + building.height - 18, 14, 18);
+
+    if (building.kind === "tubeHouse") {
+      drawTubeHouseDetails(building);
+    }
   });
+}
+
+function drawTubeHouseDetails(building) {
+  ctx.fillStyle = building.door || "#49362e";
+  ctx.fillRect(building.x + building.width / 2 - 9, building.y + building.height - 24, 18, 24);
+  ctx.fillStyle = "#2b2b32";
+  ctx.fillRect(building.x + 8, building.y + 35, building.width - 16, 5);
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.fillRect(building.x + 10, building.y + 42, building.width - 20, 5);
+  ctx.fillStyle = "#c9413a";
+  ctx.fillRect(building.x + 12, building.y + 62, building.width - 24, 12);
+  ctx.fillStyle = "#fff3c4";
+  ctx.font = "700 9px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(building.sign || "PHỐ", building.x + building.width / 2, building.y + 72);
+
+  ctx.fillStyle = "#2f3d4a";
+  ctx.fillRect(building.x + 12, building.y + 84, building.width - 24, 4);
+  ctx.fillStyle = "#d9d4bf";
+  ctx.fillRect(building.x + building.width - 24, building.y + 30, 12, 8);
+  ctx.strokeStyle = "#1f2024";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(building.x + building.width - 24, building.y + 30, 12, 8);
+  ctx.fillStyle = "#5c6267";
+  ctx.fillRect(building.x + building.width - 30, building.y - 15, 20, 8);
+}
+
+function drawWall(building) {
+  drawPixelRect(building.x, building.y, building.width, building.height, building.color || "#c28d54", "#573921", 3);
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  if (building.width >= building.height) {
+    for (let x = building.x + 12; x < building.x + building.width - 10; x += 34) {
+      ctx.fillRect(x, building.y + 6, 18, Math.max(4, building.height - 12));
+    }
+  } else {
+    for (let y = building.y + 12; y < building.y + building.height - 10; y += 34) {
+      ctx.fillRect(building.x + 6, y, Math.max(4, building.width - 12), 18);
+    }
+  }
+}
+
+function drawAdminBuilding(building) {
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.fillRect(building.x + 7, building.y + 7, building.width, building.height);
+  drawPixelRect(building.x, building.y + 14, building.width, building.height - 14, building.color || "#d8d0a8", "#151515", 4);
+  ctx.fillStyle = building.roof || "#9f4b3f";
+  ctx.fillRect(building.x - 10, building.y, building.width + 20, 24);
+  ctx.fillStyle = "#f4e6b0";
+  for (let x = building.x + 26; x < building.x + building.width - 20; x += 58) {
+    ctx.fillRect(x, building.y + 44, 28, 24);
+  }
+}
+
+function drawApartmentBlock(building) {
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.fillRect(building.x + 7, building.y + 7, building.width, building.height);
+  drawPixelRect(building.x, building.y, building.width, building.height, building.color || "#b7b9ad", "#151515", 3);
+  ctx.fillStyle = building.roof || "#5e646a";
+  ctx.fillRect(building.x - 5, building.y - 8, building.width + 10, 12);
+  ctx.fillStyle = "#dee4df";
+  for (let y = building.y + 20; y < building.y + building.height - 36; y += 32) {
+    for (let x = building.x + 14; x < building.x + building.width - 18; x += 28) {
+      ctx.fillRect(x, y, 14, 14);
+      ctx.fillStyle = "#5f7f8e";
+      ctx.fillRect(x + 2, y + 2, 10, 10);
+      ctx.fillStyle = "#dee4df";
+    }
+  }
+  ctx.fillStyle = "#6a4b35";
+  ctx.fillRect(building.x + building.width / 2 - 15, building.y + building.height - 30, 30, 30);
+  ctx.fillStyle = "#5c6267";
+  ctx.fillRect(building.x + building.width - 36, building.y - 22, 28, 12);
+  ctx.fillStyle = "#252532";
+  ctx.fillRect(building.x + building.width - 22, building.y - 28, 4, 8);
+}
+
+function drawCafeFront(building) {
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.fillRect(building.x + 6, building.y + 6, building.width, building.height);
+  drawPixelRect(building.x, building.y, building.width, building.height, building.color || "#d9b26a", "#151515", 3);
+  ctx.fillStyle = building.roof || "#8d3f39";
+  ctx.fillRect(building.x - 4, building.y - 6, building.width + 8, 12);
+  for (let x = building.x + 8; x < building.x + building.width - 8; x += 16) {
+    ctx.fillStyle = (x / 16) % 2 === 0 ? "#c9413a" : "#fff3c4";
+    ctx.fillRect(x, building.y + 14, 16, 12);
+  }
+  ctx.fillStyle = "#2f3d4a";
+  ctx.fillRect(building.x + 16, building.y + 40, building.width - 32, 28);
+  ctx.fillStyle = "#fff3c4";
+  ctx.font = "700 11px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(building.sign || "CAFE", building.x + building.width / 2, building.y + 34);
 }
 
 export function drawLandmarks(map) {
   map.landmarks.forEach((landmark) => {
+    if (!isRectVisible(landmark, 140)) {
+      return;
+    }
+
     if (!["lake", "riverLabel", "plazaLabel", "longBridge"].includes(landmark.kind)) {
       ctx.fillStyle = "rgba(0,0,0,0.22)";
       ctx.fillRect(landmark.x + 6, landmark.y + 6, landmark.width, landmark.height);
     }
 
     if (landmark.kind === "lake") {
-      drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y + landmark.height - 24, 120, "#18547f");
+      drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y + landmark.height - 40, 120, "#18547f", 210);
     } else if (landmark.kind === "temple") {
       drawTemple(landmark);
     } else if (landmark.kind === "redBridge") {
@@ -197,17 +467,23 @@ export function drawLandmarks(map) {
       drawLongBridge(landmark);
     } else if (landmark.kind === "market") {
       drawMarket(landmark);
+    } else if (landmark.kind === "cathedral") {
+      drawCathedral(landmark);
     } else if (landmark.kind === "riverLabel") {
-      drawTextBadge(landmark.name, landmark.x + landmark.width / 2, 72, 120, "#18547f");
+      drawNearbyLabel(landmark, landmark.name, landmark.x + 130, Math.max(80, getPlayerCenter().y - 80), 120, "#18547f", 150);
     } else {
       drawPixelRect(landmark.x, landmark.y, landmark.width, landmark.height, "#5fa8d3", "#151515", 4);
-      drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 10, 160, "#202025");
+      drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 10, 160, "#202025");
     }
   });
 }
 
 export function drawShops(map) {
   map.shops.forEach((shop) => {
+    if (!isRectVisible(shop, 100)) {
+      return;
+    }
+
     const food = foodCatalog[shop.foodId];
     ctx.fillStyle = "rgba(0,0,0,0.22)";
     ctx.fillRect(shop.x + 6, shop.y + 6, shop.width, shop.height);
@@ -230,12 +506,16 @@ export function drawShops(map) {
     ctx.font = "700 10px 'Courier New', monospace";
     ctx.textAlign = "center";
     ctx.fillText("ĂN", shop.x + shop.width / 2, shop.y + 20);
-    drawTextBadge(food.name, shop.x + shop.width / 2, shop.y - 16, 142, "#7d2a1d");
+    drawNearbyLabel(shop, food.name, shop.x + shop.width / 2, shop.y - 16, 142, "#7d2a1d");
   });
 }
 
 export function drawExits(map) {
   map.exits.forEach((exit) => {
+    if (!isRectVisible(exit, 100)) {
+      return;
+    }
+
     ctx.fillStyle = "rgba(0,0,0,0.24)";
     ctx.fillRect(exit.x + 5, exit.y + 5, exit.width, exit.height);
     drawPixelRect(exit.x, exit.y, exit.width, exit.height, "#7650b8", "#151515", 4);
@@ -256,18 +536,23 @@ export function drawExits(map) {
       ctx.font = "700 10px 'Courier New', monospace";
       ctx.textAlign = "center";
       ctx.fillText("XE", exit.x + exit.width - 10, exit.y - 22);
-      drawTextBadge("BUÝT", exit.x + exit.width / 2, exit.y + exit.height + 16, 70, "#3b245f");
+      drawNearbyLabel(exit, "BUÝT", exit.x + exit.width / 2, exit.y + exit.height + 16, 70, "#3b245f");
     } else {
       ctx.fillRect(exit.x + 18, exit.y + 12, exit.width - 36, 34);
       ctx.fillStyle = "#7650b8";
       ctx.fillRect(exit.x + 27, exit.y + 22, exit.width - 54, 14);
-      drawTextBadge("LỐI", exit.x + exit.width / 2, exit.y + exit.height + 16, 70, "#3b245f");
+      drawNearbyLabel(exit, "LỐI", exit.x + exit.width / 2, exit.y + exit.height + 16, 70, "#3b245f");
     }
   });
 }
 
 export function drawNpcs(map) {
   map.npcs.forEach((npc) => {
+    const npcRect = { ...npc, width: 24, height: 46 };
+    if (!isRectVisible(npcRect, 100)) {
+      return;
+    }
+
     const x = npc.x;
     const y = npc.y;
     ctx.fillStyle = "rgba(0,0,0,0.28)";
@@ -287,7 +572,7 @@ export function drawNpcs(map) {
     ctx.fillStyle = "#151515";
     ctx.fillRect(x + 4, y + 6, 3, 3);
     ctx.fillRect(x + 13, y + 6, 3, 3);
-    drawTextBadge(npc.name, x + 10, y - 13, 120, "#233021");
+    drawNearbyLabel(npcRect, npc.name, x + 10, y - 13, 120, "#233021");
   });
 }
 
@@ -297,7 +582,7 @@ export function drawTemple(landmark) {
   ctx.fillRect(landmark.x - 7, landmark.y + 12, landmark.width + 14, 14);
   ctx.fillStyle = "#f4c542";
   ctx.fillRect(landmark.x + 18, landmark.y + 36, landmark.width - 36, 20);
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 15, 125, "#6f2b26");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 15, 125, "#6f2b26");
 }
 
 export function drawRedBridge(landmark) {
@@ -306,19 +591,25 @@ export function drawRedBridge(landmark) {
   for (let x = landmark.x + 10; x < landmark.x + landmark.width - 10; x += 20) {
     ctx.fillRect(x, landmark.y + 4, 6, 34);
   }
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 13, 126, "#6f2b26");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 13, 126, "#6f2b26");
 }
 
 export function drawOldQuarter(landmark) {
-  drawPixelRect(landmark.x, landmark.y, landmark.width, landmark.height, "#e5c76f", "#151515", 3);
+  ctx.strokeStyle = "#5a3d1e";
+  ctx.lineWidth = 4;
+  ctx.setLineDash([18, 10]);
+  ctx.strokeRect(landmark.x, landmark.y, landmark.width, landmark.height);
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(229, 199, 111, 0.16)";
+  ctx.fillRect(landmark.x, landmark.y, landmark.width, landmark.height);
   const colors = ["#d94b3d", "#3d7fa5", "#7650b8", "#e9823a"];
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = colors[i];
-    ctx.fillRect(landmark.x + 8 + i * 24, landmark.y + 8, 18, 20);
+  for (let i = 0; i < 10; i++) {
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillRect(landmark.x + 24 + i * 78, landmark.y + 20, 44, 22);
     ctx.fillStyle = "#fff2bd";
-    ctx.fillRect(landmark.x + 10 + i * 24, landmark.y + 34, 14, 16);
+    ctx.fillRect(landmark.x + 30 + i * 78, landmark.y + 50, 28, 18);
   }
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 15, 112, "#5a3d1e");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 15, 112, "#5a3d1e", 180);
 }
 
 export function drawPlazaLabel(landmark) {
@@ -327,7 +618,7 @@ export function drawPlazaLabel(landmark) {
   ctx.setLineDash([10, 8]);
   ctx.strokeRect(landmark.x, landmark.y, landmark.width, landmark.height);
   ctx.setLineDash([]);
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y + 18, 190, "#705d2c");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y + 18, 190, "#705d2c", 190);
 }
 
 export function drawMausoleum(landmark) {
@@ -340,7 +631,7 @@ export function drawMausoleum(landmark) {
   }
   ctx.fillStyle = "#b02f2f";
   ctx.fillRect(landmark.x + landmark.width / 2 - 12, landmark.y, 24, 18);
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 16, 110, "#43484e");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 16, 110, "#43484e");
 }
 
 export function drawOnePillarPagoda(landmark) {
@@ -354,7 +645,7 @@ export function drawOnePillarPagoda(landmark) {
   ctx.fillRect(landmark.x + 14, landmark.y + 18, landmark.width - 28, 10);
   ctx.fillStyle = "#f6adc6";
   ctx.fillRect(landmark.x + 34, landmark.y + 4, 26, 14);
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 14, 136, "#663338");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 14, 136, "#663338");
 }
 
 export function drawCitadel(landmark) {
@@ -367,10 +658,15 @@ export function drawCitadel(landmark) {
   for (let x = landmark.x + 16; x < landmark.x + landmark.width - 20; x += 34) {
     ctx.fillRect(x, landmark.y + 18, 16, 12);
   }
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 16, 190, "#6a351f");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 16, 190, "#6a351f");
 }
 
 export function drawTempleGate(landmark) {
+  if (landmark.width > 360) {
+    drawVanMieuComplex(landmark);
+    return;
+  }
+
   drawPixelRect(landmark.x, landmark.y, landmark.width, landmark.height, "#d7b465", "#151515", 4);
   ctx.fillStyle = "#9f3e35";
   ctx.fillRect(landmark.x - 8, landmark.y - 10, landmark.width + 16, 16);
@@ -381,7 +677,40 @@ export function drawTempleGate(landmark) {
   ctx.fillStyle = "#2f7d4c";
   ctx.fillRect(landmark.x + 62, landmark.y + 28, 20, 20);
   ctx.fillRect(landmark.x + landmark.width - 82, landmark.y + 28, 20, 20);
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 17, 205, "#6a351f");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 17, 205, "#6a351f", 180);
+}
+
+function drawVanMieuComplex(landmark) {
+  ctx.strokeStyle = "#6a351f";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(landmark.x, landmark.y, landmark.width, landmark.height);
+  ctx.fillStyle = "rgba(215, 180, 101, 0.18)";
+  ctx.fillRect(landmark.x + 8, landmark.y + 8, landmark.width - 16, landmark.height - 16);
+
+  const gateY = landmark.y + 56;
+  drawPixelRect(landmark.x + landmark.width / 2 - 120, gateY, 240, 96, "#d7b465", "#151515", 4);
+  ctx.fillStyle = "#9f3e35";
+  ctx.fillRect(landmark.x + landmark.width / 2 - 134, gateY - 16, 268, 22);
+  ctx.fillStyle = "#61402a";
+  ctx.fillRect(landmark.x + landmark.width / 2 - 72, gateY + 34, 44, 62);
+  ctx.fillRect(landmark.x + landmark.width / 2 + 28, gateY + 34, 44, 62);
+
+  ctx.fillStyle = "#9f3e35";
+  ctx.fillRect(landmark.x + landmark.width / 2 - 86, landmark.y + 250, 172, 72);
+  ctx.fillStyle = "#f2bd45";
+  ctx.fillRect(landmark.x + landmark.width / 2 - 102, landmark.y + 232, 204, 28);
+  ctx.fillStyle = "#2f7d4c";
+  ctx.fillRect(landmark.x + landmark.width / 2 - 46, landmark.y + 274, 92, 44);
+
+  ctx.fillStyle = "#8b6440";
+  for (let x = landmark.x + 170; x < landmark.x + landmark.width - 120; x += 110) {
+    ctx.fillRect(x, landmark.y + 380, 40, 50);
+    ctx.fillStyle = "#d8d0a8";
+    ctx.fillRect(x + 8, landmark.y + 388, 24, 28);
+    ctx.fillStyle = "#8b6440";
+  }
+
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 17, 205, "#6a351f", 190);
 }
 
 export function drawLongBridge(landmark) {
@@ -397,7 +726,7 @@ export function drawLongBridge(landmark) {
     ctx.lineTo(x + 40, landmark.y + 64);
     ctx.stroke();
   }
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 12, 155, "#6f2b26");
+  drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 12, 155, "#6f2b26", 180);
 }
 
 export function drawMarket(landmark) {
@@ -410,5 +739,53 @@ export function drawMarket(landmark) {
   }
   ctx.fillStyle = "#402c25";
   ctx.fillRect(landmark.x + landmark.width / 2 - 20, landmark.y + 62, 40, 44);
-  drawTextBadge(landmark.name, landmark.x + landmark.width / 2, landmark.y - 16, 150, "#6f2b26");
+  if (landmark.name) {
+    drawNearbyLabel(landmark, landmark.name, landmark.x + landmark.width / 2, landmark.y - 16, 150, "#6f2b26");
+  }
+}
+
+export function drawCathedral(landmark) {
+  const x = landmark.x;
+  const y = landmark.y;
+  const w = landmark.width;
+  const h = landmark.height;
+
+  drawPixelRect(x + 42, y + 34, w - 84, h - 36, "#b9b1a2", "#151515", 4);
+  drawPixelRect(x + 8, y + 22, 62, h - 22, "#aaa394", "#151515", 4);
+  drawPixelRect(x + w - 70, y + 22, 62, h - 22, "#aaa394", "#151515", 4);
+
+  ctx.fillStyle = "#5d5b56";
+  ctx.fillRect(x + 2, y + 10, 74, 20);
+  ctx.fillRect(x + w - 76, y + 10, 74, 20);
+  ctx.fillStyle = "#3e3d3a";
+  ctx.fillRect(x + 18, y, 30, 14);
+  ctx.fillRect(x + w - 48, y, 30, 14);
+
+  ctx.fillStyle = "#4b3d35";
+  ctx.fillRect(x + w / 2 - 22, y + h - 62, 44, 62);
+  ctx.fillStyle = "#2f6d8c";
+  ctx.fillRect(x + w / 2 - 14, y + h - 54, 28, 20);
+  ctx.fillStyle = "#151515";
+  ctx.fillRect(x + w / 2 - 2, y + h - 62, 4, 62);
+
+  drawArchWindow(x + 28, y + 70);
+  drawArchWindow(x + w - 48, y + 70);
+  drawArchWindow(x + w / 2 - 9, y + 58);
+
+  ctx.fillStyle = "#ddd3bd";
+  ctx.fillRect(x + 78, y + 42, w - 156, 8);
+  ctx.fillStyle = "#151515";
+  ctx.fillRect(x + w / 2 - 3, y + 30, 6, 18);
+
+  drawNearbyLabel(landmark, landmark.name, x + w / 2, y - 16, 176, "#4e4b47", 190);
+}
+
+function drawArchWindow(x, y) {
+  ctx.fillStyle = "#151515";
+  ctx.fillRect(x - 2, y + 8, 22, 30);
+  ctx.fillStyle = "#2f6d8c";
+  ctx.fillRect(x, y + 10, 18, 28);
+  ctx.fillStyle = "#d6edf5";
+  ctx.fillRect(x + 4, y + 14, 4, 8);
+  ctx.fillRect(x + 10, y + 14, 4, 8);
 }

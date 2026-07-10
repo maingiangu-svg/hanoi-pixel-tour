@@ -53,7 +53,7 @@ export const ui = {
 export function createDefaultState() {
   return {
     currentMapId: "hoanKiem",
-    player: { x: 174, y: 356 },
+    player: { x: 610, y: 1370 },
     money: 50000,
     inventory: { foods: [], souvenirs: [], stamps: [], specialItems: [] },
     completedQuizzes: {},
@@ -83,8 +83,8 @@ export const runtime = {
 };
 
 export const player = {
-  x: 174,
-  y: 356,
+  x: 610,
+  y: 1370,
   width: 24,
   height: 32,
   speed: 2.35,

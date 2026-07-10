@@ -79,11 +79,11 @@ export function getPlayerCenter() {
 
 export function placePlayerAtSafeStart(mapId) {
   const starts = {
-    hoanKiem: { x: 174, y: 356 },
-    baDinh: { x: 888, y: 520 },
-    longBien: { x: 98, y: 350 }
+    hoanKiem: { x: 610, y: 1370 },
+    baDinh: { x: 340, y: 1850 },
+    longBien: { x: 150, y: 890 }
   };
-  const start = starts[mapId] || starts.hoanKiem;
+  const start = maps[mapId]?.spawn || starts[mapId] || starts.hoanKiem;
   player.x = start.x;
   player.y = start.y;
   state.player.x = start.x;

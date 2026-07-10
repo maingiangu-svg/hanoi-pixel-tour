@@ -1,5 +1,6 @@
 import { state, ui } from "../state.js";
 import { foodCatalog } from "../data/foods.js";
+import { landmarkDetails } from "../data/landmarks.js";
 import { addUnique, findLandmark } from "../utils/helpers.js";
 import { closePanelOverlays, openFoodInfoPanel, openLandmarkInfoPanel } from "./modal.js";
 

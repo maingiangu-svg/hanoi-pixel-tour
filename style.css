@@ -97,12 +97,12 @@ canvas {
 .top-bar {
   position: absolute;
   z-index: 4;
-  top: 10px;
-  left: 10px;
-  right: 10px;
+  top: 8px;
+  left: 8px;
+  right: 8px;
   display: grid;
-  grid-template-columns: 1.25fr 0.8fr 0.55fr 0.75fr 2fr;
-  gap: 8px;
+  grid-template-columns: 1.2fr 0.72fr 0.48fr 0.68fr 1.9fr;
+  gap: 6px;
   pointer-events: none;
 }
 
@@ -117,8 +117,8 @@ canvas {
 
 .hud-pill {
   min-width: 0;
-  min-height: 54px;
-  padding: 8px 10px;
+  min-height: 46px;
+  padding: 6px 8px;
   background:
     linear-gradient(180deg, rgba(255, 248, 214, 0.97), rgba(245, 214, 132, 0.95));
   color: #151515;
@@ -128,9 +128,9 @@ canvas {
 
 .hud-label {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   color: #55515a;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -138,7 +138,7 @@ canvas {
   display: block;
   overflow: hidden;
   color: #151515;
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -152,17 +152,20 @@ canvas {
   position: absolute;
   z-index: 4;
   left: 50%;
-  bottom: 118px;
-  max-width: min(90%, 520px);
-  transform: translateX(-50%);
-  padding: 8px 12px;
+  top: 50%;
+  bottom: auto;
+  max-width: min(86%, 220px);
+  transform: translate(-50%, -100%);
+  padding: 6px 10px;
   background: #252532;
   color: #fff4c7;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1.25;
   text-align: center;
   outline: 2px solid #f4c542;
-  outline-offset: -8px;
+  outline-offset: -7px;
+  white-space: pre-line;
 }
 
 .dialogue-box {

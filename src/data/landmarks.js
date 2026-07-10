@@ -25,6 +25,12 @@ export const landmarkDetails = {
     highlight: "Nhiều con phố mang tên các nghề thủ công, buôn bán truyền thống.",
     funFact: "Phố Cổ là khu vực rất được du khách trong và ngoài nước yêu thích."
   },
+  nhaThoLon: {
+    intro: "Nhà thờ Lớn Hà Nội là một công trình nổi bật ở khu trung tâm gần Hồ Gươm.",
+    meaning: "Công trình gắn với lịch sử đô thị Hà Nội và tạo nên một không gian phố cổ rất đặc trưng.",
+    highlight: "Mặt tiền đối xứng với hai tháp chuông, cửa vòm và quảng trường nhỏ phía trước.",
+    funFact: "Khu vực quanh nhà thờ có nhiều quán cà phê, hàng ăn và phố nhỏ đông người qua lại."
+  },
   langBac: {
     intro: "Lăng Chủ tịch Hồ Chí Minh là nơi gìn giữ thi hài của Bác Hồ.",
     meaning: "Đây là công trình có ý nghĩa chính trị, lịch sử và tình cảm rất lớn đối với người dân Việt Nam.",

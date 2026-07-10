@@ -1,14 +1,17 @@
-import { player, WORLD_HEIGHT, WORLD_WIDTH } from "../state.js";
+import { player } from "../state.js";
 import { getCurrentMap } from "./helpers.js";
 
 export function isPlayerAreaWalkable(x, y) {
   const feet = getPlayerFeet(x, y);
+  const map = getCurrentMap();
+  const worldWidth = map.width || 1024;
+  const worldHeight = map.height || 640;
 
   if (
     feet.x < 0 ||
     feet.y < 0 ||
-    feet.x + feet.width > WORLD_WIDTH ||
-    feet.y + feet.height > WORLD_HEIGHT
+    feet.x + feet.width > worldWidth ||
+    feet.y + feet.height > worldHeight
   ) {
     return false;
   }
@@ -21,7 +24,7 @@ export function isPlayerAreaWalkable(x, y) {
   ];
 
   const allowed = points.every((point) =>
-    getCurrentMap().walkZones.some((zone) => pointInRect(point.x, point.y, zone))
+    map.walkZones.some((zone) => pointInRect(point.x, point.y, zone))
   );
 
   if (!allowed) {
@@ -45,6 +48,7 @@ export function getSolidObjects() {
   return [
     ...map.buildings,
     ...map.shops,
+    ...(map.collisionBlocks || []),
     ...map.landmarks.filter((landmark) => landmark.solid !== false)
   ];
 }

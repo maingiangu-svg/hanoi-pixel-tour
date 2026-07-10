@@ -1,11 +1,13 @@
 import { BUS_PRICE, NPC_REWARD, player, runtime, state, ui } from "../state.js";
 import { maps } from "../data/maps.js";
+import { snapCameraToPlayer, worldToScreen } from "../camera.js";
 import { foodCatalog } from "../data/foods.js";
 import { distanceToRect, isPlayerAreaWalkable } from "../utils/collision.js";
 import { addUnique, findLandmark, findNpcTask, getCurrentMap, getPlayerCenter, grantLandmarkRewards, isQuizCorrect, placePlayerAtSafeStart, removeItem } from "../utils/helpers.js";
 import { formatMoney } from "../utils/format.js";
 import { saveGame } from "../storage.js";
 import { discoverLandmark } from "./journal.js";
+import { distanceToInteractionPoint, getLandmarkInteractionPoints } from "./interactionPoints.js";
 import { openQuiz } from "./quiz.js";
 import { openShop } from "./shop.js";
 import { checkAreaQuests, checkVictory } from "./questSystem.js";
@@ -18,19 +20,31 @@ export function updateNearbyInteractable() {
     return;
   }
 
+  const playerCenter = getPlayerCenter();
   const interactables = getInteractables()
     .map((item) => ({
       ...item,
-      distance: distanceToRect(getPlayerCenter(), item.object),
-      range: item.object.range || item.range || 76
+      distance: item.point
+        ? distanceToInteractionPoint(item.point, playerCenter)
+        : distanceToRect(playerCenter, item.object),
+      range: item.point ? item.point.radius : (item.object.range || item.range || 76)
     }))
     .filter((item) => item.distance <= item.range)
-    .sort((a, b) => a.priority - b.priority || a.distance - b.distance);
+    .sort((a, b) => a.distance - b.distance || a.priority - b.priority);
 
   runtime.nearbyInteractable = interactables[0] || null;
 
   if (runtime.nearbyInteractable) {
     ui.nearbyHint.textContent = getInteractionPrompt(runtime.nearbyInteractable);
+    const screen = runtime.nearbyInteractable.point
+      ? worldToScreen(
+        runtime.nearbyInteractable.point.x + runtime.nearbyInteractable.point.labelOffsetX,
+        runtime.nearbyInteractable.point.y + runtime.nearbyInteractable.point.labelOffsetY
+      )
+      : worldToScreen(player.x + player.width / 2, player.y - 6);
+    ui.nearbyHint.style.left = `${Math.round(screen.x)}px`;
+    ui.nearbyHint.style.top = `${Math.round(screen.y)}px`;
+    ui.nearbyHint.style.bottom = "auto";
     ui.nearbyHint.classList.remove("hidden");
   } else {
     ui.nearbyHint.classList.add("hidden");
@@ -55,11 +69,20 @@ export function getInteractables() {
       priority: 3,
       range: 86
     })),
-    ...map.landmarks.map((object) => ({
+    ...getLandmarkInteractionPoints(map).map((point) => ({
       type: "landmark",
-      object,
-      priority: object.priority || 4,
-      range: object.range || 82
+      object: {
+        id: point.id,
+        name: point.landmark.name,
+        x: point.x - 8,
+        y: point.y - 8,
+        width: 16,
+        height: 16
+      },
+      source: point.landmark,
+      point,
+      priority: point.landmark.priority || 4,
+      range: point.radius
     }))
   ];
 }
@@ -68,20 +91,20 @@ export function getInteractionPrompt(item) {
   if (item.type === "exit") {
     const targetName = maps[item.object.targetMap].name;
     if (item.object.kind === "bus") {
-      return `E: Đi xe buýt sang khu ${targetName}`;
+      return `E · Xe buýt đến ${targetName}`;
     }
-    return `E: Đi sang khu ${targetName}`;
+    return `E · Đi đến ${targetName}`;
   }
 
   if (item.type === "shop") {
-    return `E: Ghé quán ${item.object.name}`;
+    return `E · Ghé ${item.object.name}`;
   }
 
   if (item.type === "npc") {
-    return `E: Trò chuyện với ${item.object.name}`;
+    return `E · Nói chuyện với ${item.object.name}`;
   }
 
-  return `E: Tìm hiểu về ${item.object.name}`;
+  return `${item.source ? item.source.name : item.object.name}\n[E] Khám phá`;
 }
 
 export function interact() {
@@ -109,7 +132,7 @@ export function interact() {
   }
 
   if (runtime.nearbyInteractable.type === "landmark") {
-    handleLandmark(runtime.nearbyInteractable.object);
+    handleLandmark(runtime.nearbyInteractable.source || runtime.nearbyInteractable.object);
   }
 }
 
@@ -141,6 +164,7 @@ export function travelToMap(exit) {
     placePlayerAtSafeStart(exit.targetMap);
   }
 
+  snapCameraToPlayer();
   showMessage(exit.message);
   saveGame();
   checkVictory();
