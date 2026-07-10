@@ -91,6 +91,7 @@ export const baDinhMap = {
       priority: 7,
       range: 90,
       interactionPoint: { x: 760, y: 748, radius: 50, visibleRange: 240, labelOffsetY: -34 },
+      quizId: "quangTruongBaDinh",
       stamp: "Tem Quảng trường Ba Đình",
       description: "Không gian quảng trường rộng lớn trước Lăng Bác."
     },
@@ -188,6 +189,59 @@ export const baDinhMap = {
         souvenir: "Sổ tay sinh viên",
         intro: "Bạn sinh viên nhờ bạn ghé Văn Miếu trước, rồi cùng trả lời một câu hỏi về truyền thống hiếu học.",
         done: "Bạn sinh viên cảm ơn và tặng bạn một cuốn sổ nhỏ."
+      }
+    },
+    {
+      id: "exerciseBaDinh",
+      name: "Cô tập thể dục",
+      x: 1360,
+      y: 760,
+      color: "#8de097",
+      activity: "exercise",
+      task: {
+        type: "ambient",
+        taskId: "ambientExerciseBaDinh",
+        reward: 5000,
+        souvenir: "Lời chào buổi sáng Ba Đình",
+        title: "Thể dục buổi sáng",
+        intro: "Cô đang vươn vai bên hàng cây thẳng của quảng trường và nói rằng buổi sáng ở Hà Nội luôn bắt đầu bằng nhịp rất đều.",
+        action: "Chào cô",
+        done: "Cô nhắc bạn đi chậm lại để cảm nhận khoảng sân rộng của Ba Đình."
+      }
+    },
+    {
+      id: "joggerVanMieu",
+      name: "Người chạy bộ",
+      x: 900,
+      y: 1770,
+      color: "#7bdff2",
+      activity: "jog",
+      pathAmplitude: 34,
+      task: {
+        type: "ambient",
+        taskId: "ambientJogVanMieu",
+        reward: 5000,
+        souvenir: "Vòng chạy Văn Miếu",
+        title: "Vòng chạy Văn Miếu",
+        intro: "Người chạy bộ nói rằng khu Văn Miếu có nhiều khoảng sân và hàng cây, nên chạy chậm cũng giống đọc từng lớp cổng.",
+        action: "Chạy cùng một đoạn",
+        done: "Bạn chạy nhẹ một đoạn và nhận ra sân lát đá giúp bước chân rất rõ nhịp."
+      }
+    },
+    {
+      id: "foodScholarBaDinh",
+      name: "Chú ghi chép món Bắc",
+      x: 2220,
+      y: 1660,
+      color: "#f7a072",
+      task: {
+        type: "quizChain",
+        taskId: "foodScholarBaDinh",
+        quizIds: ["phoHaNoiHistory", "banhCuonHistory"],
+        reward: NPC_REWARD,
+        souvenir: "Ghi chú Phở và Bánh Cuốn",
+        intro: "Chú đang so sánh phở Hà Nội và bánh cuốn. Nếu cháu hiểu kỹ thuật món ăn, thử trả lời hai câu nhé.",
+        done: "Chú ghi thêm tên bạn vào trang ghi chú ẩm thực."
       }
     }
   ],

@@ -1,7 +1,8 @@
 import { keys, player, state } from "../state.js";
-import { isPlayerAreaWalkable } from "../utils/collision.js";
+import { isPlayerAreaWalkable, isVehicleAreaWalkable } from "../utils/collision.js";
 import { isOverlayOpen } from "./modal.js";
 import { saveGameThrottled } from "../storage.js";
+import { getPlayerMoveSpeed, isRidingVehicle } from "./vehicle.js";
 
 export function movePlayer() {
   if (isOverlayOpen()) {
@@ -31,9 +32,10 @@ export function movePlayer() {
       player.facing = dy > 0 ? "down" : "up";
     }
 
-    tryMove(dx * player.speed, 0);
-    tryMove(0, dy * player.speed);
-    player.step += 0.35;
+    const speed = getPlayerMoveSpeed();
+    tryMove(dx * speed, 0);
+    tryMove(0, dy * speed);
+    player.step += isRidingVehicle() ? 0.55 : 0.35;
     saveGameThrottled();
   }
 }
@@ -42,7 +44,11 @@ export function tryMove(dx, dy) {
   const nextX = player.x + dx;
   const nextY = player.y + dy;
 
-  if (isPlayerAreaWalkable(nextX, nextY)) {
+  const canMove = isRidingVehicle()
+    ? isVehicleAreaWalkable(nextX, nextY)
+    : isPlayerAreaWalkable(nextX, nextY);
+
+  if (canMove) {
     player.x = nextX;
     player.y = nextY;
     state.player.x = Math.round(player.x);

@@ -15,7 +15,7 @@
           <h1>Hà Nội Pixel Tour</h1>
         </div>
         <p class="guide">
-          W/S hoặc ↑/↓: Chọn | Enter: Xác nhận | 1–4: Chọn nhanh | Esc: Đóng
+          W/S hoặc ↑/↓: Chọn | Enter: Xác nhận | 1–4: Chọn nhanh | M: Bản đồ | Esc: Đóng
         </p>
       </div>
 
@@ -46,6 +46,8 @@
         </div>
 
         <div id="nearbyHint" class="nearby-hint hidden">E: Tương tác</div>
+
+        <div id="vehicleStatus" class="vehicle-status hidden">Đi bộ</div>
 
         <div id="dialogueBox" class="dialogue-box hidden" role="status" aria-live="polite">
           <p id="dialogueText"></p>
@@ -87,6 +89,20 @@
     </article>
   </div>
 
+  <div id="mapPanel" class="panel-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+    <article class="panel panel-wide map-panel">
+      <div class="panel-header">
+        <div>
+          <p class="modal-tag">Bản đồ</p>
+          <h2 id="mapTitle">Bản đồ khu vực</h2>
+        </div>
+        <button id="closeMap" class="panel-close" type="button">Đóng</button>
+      </div>
+      <div id="mapContent" class="panel-content"></div>
+      <p class="info-hint">M: Mở/đóng bản đồ | Esc: Đóng</p>
+    </article>
+  </div>
+
   <div id="quizModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
     <article class="modal-box">
       <p id="quizTag" class="modal-tag">Câu hỏi</p>
@@ -116,6 +132,52 @@
       <div id="infoContent" class="info-content"></div>
       <p class="info-hint">W/S hoặc ↑/↓: Chọn | Enter: Xác nhận | 1–4: Chọn nhanh | Esc: Đóng</p>
       <div id="infoActions" class="choice-actions"></div>
+    </article>
+  </div>
+
+  <div id="characterModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="characterTitle">
+    <article class="modal-box character-box">
+      <p class="modal-tag">Nhân vật</p>
+      <h2 id="characterTitle">Chọn nhân vật của bạn</h2>
+      <div id="characterOptions" class="character-options">
+        <article class="character-card" data-gender="male">
+          <div class="character-preview character-preview-male" aria-hidden="true">
+            <span class="preview-shadow"></span>
+            <span class="preview-leg preview-leg-left"></span>
+            <span class="preview-leg preview-leg-right"></span>
+            <span class="preview-body"></span>
+            <span class="preview-pack"></span>
+            <span class="preview-head"></span>
+            <span class="preview-hair"></span>
+            <span class="preview-cap"></span>
+            <span class="preview-eye preview-eye-left"></span>
+            <span class="preview-eye preview-eye-right"></span>
+          </div>
+          <h3>Nam</h3>
+          <p class="character-state">Đang chọn</p>
+          <button class="character-pick" type="button" data-gender="male">Chọn Nam</button>
+        </article>
+        <article class="character-card" data-gender="female">
+          <div class="character-preview character-preview-female" aria-hidden="true">
+            <span class="preview-shadow"></span>
+            <span class="preview-leg preview-leg-left"></span>
+            <span class="preview-leg preview-leg-right"></span>
+            <span class="preview-body"></span>
+            <span class="preview-pack"></span>
+            <span class="preview-head"></span>
+            <span class="preview-hair"></span>
+            <span class="preview-hair-side preview-hair-left"></span>
+            <span class="preview-hair-side preview-hair-right"></span>
+            <span class="preview-eye preview-eye-left"></span>
+            <span class="preview-eye preview-eye-right"></span>
+          </div>
+          <h3>Nữ</h3>
+          <p class="character-state">Chưa chọn</p>
+          <button class="character-pick" type="button" data-gender="female">Chọn Nữ</button>
+        </article>
+      </div>
+      <p class="info-hint">A/D hoặc ←/→: Đổi lựa chọn | Enter: Xác nhận</p>
+      <button id="characterConfirm" class="primary-button" type="button">Xác nhận Nam</button>
     </article>
   </div>
 

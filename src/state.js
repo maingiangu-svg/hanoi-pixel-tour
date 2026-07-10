@@ -18,6 +18,7 @@ export const ui = {
   hudStamps: document.getElementById("hudStamps"),
   hudFoods: document.getElementById("hudFoods"),
   hudObjective: document.getElementById("hudObjective"),
+  vehicleStatus: document.getElementById("vehicleStatus"),
   nearbyHint: document.getElementById("nearbyHint"),
   dialogueBox: document.getElementById("dialogueBox"),
   dialogueText: document.getElementById("dialogueText"),
@@ -30,6 +31,10 @@ export const ui = {
   journalPanel: document.getElementById("journalPanel"),
   journalContent: document.getElementById("journalContent"),
   closeJournal: document.getElementById("closeJournal"),
+  mapPanel: document.getElementById("mapPanel"),
+  mapTitle: document.getElementById("mapTitle"),
+  mapContent: document.getElementById("mapContent"),
+  closeMap: document.getElementById("closeMap"),
   quizModal: document.getElementById("quizModal"),
   quizTag: document.getElementById("quizTag"),
   quizTitle: document.getElementById("quizTitle"),
@@ -47,13 +52,18 @@ export const ui = {
   infoTitle: document.getElementById("infoTitle"),
   infoIntro: document.getElementById("infoIntro"),
   infoContent: document.getElementById("infoContent"),
-  infoActions: document.getElementById("infoActions")
+  infoActions: document.getElementById("infoActions"),
+  characterModal: document.getElementById("characterModal"),
+  characterOptions: document.getElementById("characterOptions"),
+  characterConfirm: document.getElementById("characterConfirm")
 };
 
 export function createDefaultState() {
   return {
     currentMapId: "hoanKiem",
     player: { x: 610, y: 1370 },
+    profile: { gender: null },
+    vehicle: { owned: false, type: "vinfast-electric", equipped: false },
     money: 50000,
     inventory: { foods: [], souvenirs: [], stamps: [], specialItems: [] },
     completedQuizzes: {},
@@ -77,7 +87,10 @@ export const runtime = {
   nearbyInteractable: null,
   activeQuiz: null,
   quizSelectedIndex: 0,
+  choiceSelectedIndex: 0,
   infoSelectedIndex: 0,
+  characterSelectedIndex: 0,
+  characterSelection: { allowClose: false, firstTime: false },
   pendingVictory: false,
   lastSavedAt: 0
 };

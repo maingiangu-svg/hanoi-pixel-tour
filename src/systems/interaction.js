@@ -7,9 +7,10 @@ import { addUnique, findLandmark, findNpcTask, getCurrentMap, getPlayerCenter, g
 import { formatMoney } from "../utils/format.js";
 import { saveGame } from "../storage.js";
 import { discoverLandmark } from "./journal.js";
-import { distanceToInteractionPoint, getLandmarkInteractionPoints } from "./interactionPoints.js";
+import { distanceToInteractionPoint, getLandmarkInteractionPoints, getVehicleShopInteractionPoints } from "./interactionPoints.js";
 import { openQuiz } from "./quiz.js";
 import { openShop } from "./shop.js";
+import { dismountVehicle, isRidingVehicle, openVehicleShop } from "./vehicle.js";
 import { checkAreaQuests, checkVictory } from "./questSystem.js";
 import { closeChoiceModal, closeInfoModal, isOverlayOpen, openChoiceModal, openLandmarkInfoPanel, showMessage } from "./modal.js";
 
@@ -69,6 +70,21 @@ export function getInteractables() {
       priority: 3,
       range: 86
     })),
+    ...getVehicleShopInteractionPoints(map).map((point) => ({
+      type: "vehicleShop",
+      object: {
+        id: point.id,
+        name: point.shop.name,
+        x: point.x - 8,
+        y: point.y - 8,
+        width: 16,
+        height: 16
+      },
+      source: point.shop,
+      point,
+      priority: 3,
+      range: point.radius
+    })),
     ...getLandmarkInteractionPoints(map).map((point) => ({
       type: "landmark",
       object: {
@@ -88,6 +104,13 @@ export function getInteractables() {
 }
 
 export function getInteractionPrompt(item) {
+  if (isRidingVehicle()) {
+    if (item.type === "exit") {
+      return "E · Cất xe và chuyển khu";
+    }
+    return "[V] Xuống xe để tương tác";
+  }
+
   if (item.type === "exit") {
     const targetName = maps[item.object.targetMap].name;
     if (item.object.kind === "bus") {
@@ -102,6 +125,10 @@ export function getInteractionPrompt(item) {
 
   if (item.type === "npc") {
     return `E · Nói chuyện với ${item.object.name}`;
+  }
+
+  if (item.type === "vehicleShop") {
+    return "[E] Xem xe VinFast";
   }
 
   return `${item.source ? item.source.name : item.object.name}\n[E] Khám phá`;
@@ -119,12 +146,21 @@ export function interact() {
     return;
   }
 
+  if (isRidingVehicle() && runtime.nearbyInteractable.type !== "exit") {
+    showMessage("Nhấn V để xuống xe trước khi tương tác.");
+    return;
+  }
+
   if (runtime.nearbyInteractable.type === "exit") {
     travelToMap(runtime.nearbyInteractable.object);
   }
 
   if (runtime.nearbyInteractable.type === "shop") {
     openShop(runtime.nearbyInteractable.source);
+  }
+
+  if (runtime.nearbyInteractable.type === "vehicleShop") {
+    openVehicleShop(runtime.nearbyInteractable.source);
   }
 
   if (runtime.nearbyInteractable.type === "npc") {
@@ -137,6 +173,8 @@ export function interact() {
 }
 
 export function travelToMap(exit) {
+  dismountVehicle({ silent: true });
+
   if (exit.kind === "bus") {
     const freeReturn = state.money < BUS_PRICE && exit.targetMap === "hoanKiem" && !state.freeReturnUsed;
 
@@ -237,6 +275,25 @@ export function handleNpc(npc) {
       actions: [
         {
           label: task.action,
+          className: "primary-choice",
+          onClick: () => {
+            completeNpcTask(task);
+            closeChoiceModal();
+          }
+        },
+        { label: "Rời đi", onClick: closeChoiceModal }
+      ]
+    });
+  }
+
+  if (task.type === "ambient") {
+    openChoiceModal({
+      tag: "Đời sống Hà Nội",
+      title: task.title || npc.name,
+      body: task.intro,
+      actions: [
+        {
+          label: task.action || "Trò chuyện",
           className: "primary-choice",
           onClick: () => {
             completeNpcTask(task);

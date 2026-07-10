@@ -33,7 +33,7 @@ export const longBienMap = {
     { x: 362, y: 98, width: 860, height: 1228, kind: "brick" },
     { x: 1000, y: 420, width: 760, height: 1040, kind: "embankment" },
     { x: 1010, y: 1060, width: 660, height: 390, kind: "brick" },
-    { x: 1742, y: 0, width: 120, height: 1800, kind: "grass" }
+    { x: 1742, y: 0, width: 18, height: 1800, kind: "grass" }
   ],
   buildings: [
     ...rowHouses({ x: 420, y: 130, count: 7, width: 74, height: 104, signs: ["SẮT", "TRÀ", "PHỞ", "KHO", "XE", "BÚN", "ĐIỆN"] }),
@@ -128,6 +128,60 @@ export const longBienMap = {
         quizId: "comLangVong",
         intro: "Cô bán cốm hỏi bạn một câu nhỏ về thức quà mùa thu Hà Nội.",
         done: "Cô bán cốm gật đầu: Cháu biết về cốm rồi đấy!"
+      }
+    },
+    {
+      id: "riversideWalker",
+      name: "Người đi dạo ven sông",
+      x: 1600,
+      y: 920,
+      color: "#f2bd45",
+      activity: "walk",
+      pathAmplitude: 28,
+      task: {
+        type: "ambient",
+        taskId: "ambientRiversideWalker",
+        reward: 5000,
+        souvenir: "Gió ven Sông Hồng",
+        title: "Ven Sông Hồng",
+        intro: "Người đi dạo chỉ về phía sông và nói rằng Long Biên luôn có cảm giác vừa cũ vừa rộng vì bờ sông mở ra sau phố.",
+        action: "Nghe kể",
+        done: "Bạn đứng nhìn một lát và nghe tiếng phố nhỏ phía sau lưng."
+      }
+    },
+    {
+      id: "bridgeRunner",
+      name: "Bạn chạy bộ trên cầu",
+      x: 1320,
+      y: 610,
+      color: "#ff8fab",
+      activity: "jog",
+      pathAmplitude: 42,
+      task: {
+        type: "ambient",
+        taskId: "ambientBridgeRunner",
+        reward: 5000,
+        souvenir: "Nhịp chạy Cầu Long Biên",
+        title: "Nhịp cầu Long Biên",
+        intro: "Bạn chạy bộ bảo rằng nhịp thép của cầu khiến mỗi bước chân nghe rõ hơn, nhất là lúc gió từ Sông Hồng thổi lên.",
+        action: "Chạy theo nhịp cầu",
+        done: "Bạn thử bước vài nhịp và hiểu vì sao nhiều người thích đi bộ trên cầu."
+      }
+    },
+    {
+      id: "streetStoryteller",
+      name: "Bác kể chuyện phố",
+      x: 1180,
+      y: 870,
+      color: "#caa6ff",
+      task: {
+        type: "quizChain",
+        taskId: "streetFoodStoryLongBien",
+        quizIds: ["phoGanhHistory", "traDaCulture"],
+        reward: NPC_REWARD,
+        souvenir: "Mẩu chuyện vỉa hè Long Biên",
+        intro: "Bác ngồi bên quán trà đá, kể về phở gánh và vỉa hè. Cháu thử trả lời hai câu để xem có hiểu nhịp phố không nhé.",
+        done: "Bác gật gù: Biết ăn cũng là biết nhìn phố."
       }
     }
   ],

@@ -168,6 +168,23 @@ canvas {
   white-space: pre-line;
 }
 
+.vehicle-status {
+  position: absolute;
+  z-index: 4;
+  right: 10px;
+  bottom: 10px;
+  max-width: min(70%, 260px);
+  padding: 7px 10px;
+  border: 4px solid var(--ink);
+  background: #fff0a8;
+  color: #151515;
+  box-shadow: 4px 4px 0 #000;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.25;
+  pointer-events: none;
+}
+
 .dialogue-box {
   position: absolute;
   z-index: 4;
@@ -335,6 +352,59 @@ canvas {
   background: #7a5a1c;
 }
 
+.quest-heading {
+  margin: 16px 0 10px;
+  font-size: 18px;
+  color: #211c18;
+}
+
+.side-quest-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.side-quest-card {
+  border: 3px solid #202025;
+  background: #fff9df;
+  padding: 12px;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.side-quest-card.is-done {
+  background: #d9f3bc;
+}
+
+.side-quest-card.is-active {
+  background: #fff1b0;
+}
+
+.side-quest-card h4,
+.side-quest-card p {
+  margin: 0;
+}
+
+.side-quest-card h4 {
+  font-size: 18px;
+}
+
+.side-quest-description {
+  margin-top: 6px !important;
+  color: #3d3428;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.side-quest-meta {
+  margin: 8px 0 !important;
+  color: #6c4d18;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.side-quest-objectives {
+  margin-top: 10px;
+}
+
 .modal-tag {
   display: inline-block;
   margin: 0 0 10px;
@@ -408,6 +478,32 @@ canvas {
   opacity: 0.58;
 }
 
+.inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.inventory-actions button,
+.character-pick {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 3px solid #151515;
+  border-radius: 0;
+  background: #f2bd45;
+  color: #151515;
+  cursor: pointer;
+  font-weight: 900;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.inventory-actions button:active,
+.character-pick:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #000;
+}
+
 .info-box {
   width: min(100%, 860px);
   border-color: #111116;
@@ -452,6 +548,338 @@ canvas {
   color: #594c2e;
   font-size: 13px;
   font-weight: 800;
+}
+
+.map-panel {
+  width: min(100%, 1040px);
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 0.8fr);
+  gap: 14px;
+}
+
+.map-frame {
+  border: 4px solid #151515;
+  background: #2b2b32;
+  box-shadow: 4px 4px 0 #000;
+  overflow: hidden;
+}
+
+.map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 320px;
+  image-rendering: pixelated;
+}
+
+.map-paper {
+  fill: #efe0ad;
+}
+
+.map-zone {
+  stroke-width: 2;
+  stroke: #3a342d;
+}
+
+.map-zone-road,
+.map-zone-bridge {
+  fill: #3f444c;
+}
+
+.map-zone-sidewalk,
+.map-zone-path {
+  fill: #c9cec4;
+}
+
+.map-zone-plaza,
+.map-zone-courtyard {
+  fill: #d5bd73;
+}
+
+.map-water {
+  fill: #2f96ce;
+  stroke: #0d4d7a;
+  stroke-width: 3;
+}
+
+.map-marker rect {
+  stroke: #151515;
+  stroke-width: 3;
+}
+
+.map-marker text {
+  fill: #151515;
+  font: 900 12px "Courier New", monospace;
+}
+
+.map-marker-landmark rect {
+  fill: #fff36d;
+}
+
+.map-marker-landmark.is-seen rect {
+  fill: #f2bd45;
+}
+
+.map-marker-landmark.is-discovered rect {
+  fill: #8de097;
+}
+
+.map-marker-shop rect {
+  fill: #f07a38;
+}
+
+.map-marker-exit rect {
+  fill: #7650b8;
+}
+
+.map-marker-vehicle rect {
+  fill: #7bdff2;
+}
+
+.map-marker-player rect {
+  fill: #d8484f;
+}
+
+.map-marker-player text {
+  fill: #fff8d6;
+}
+
+.map-label {
+  fill: #201b17;
+  font: 900 11px "Courier New", monospace;
+  paint-order: stroke;
+  stroke: #fff8d6;
+  stroke-width: 3px;
+}
+
+.map-label-water {
+  fill: #0d4d7a;
+}
+
+.map-side {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.map-stat,
+.map-legend,
+.map-routes {
+  border: 3px solid #202025;
+  background: #fff9df;
+  padding: 10px;
+}
+
+.map-stat h3,
+.map-legend h3,
+.map-routes h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.map-stat p,
+.map-legend p,
+.map-routes p {
+  margin: 4px 0;
+  color: #312b22;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.map-key {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  border: 3px solid #151515;
+  vertical-align: -3px;
+}
+
+.map-key-player {
+  background: #d8484f;
+}
+
+.map-key-landmark {
+  background: #fff36d;
+}
+
+.map-key-seen {
+  background: #8de097;
+}
+
+.map-key-food {
+  background: #f07a38;
+}
+
+.map-key-bus {
+  background: #7650b8;
+}
+
+.character-box {
+  width: min(100%, 760px);
+}
+
+.character-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0 14px;
+}
+
+.character-card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px;
+  border: 4px solid #151515;
+  background: #fff9df;
+  color: #151515;
+  box-shadow: 4px 4px 0 #000;
+  cursor: pointer;
+}
+
+.character-card.is-selected {
+  background: #f4c542;
+  transform: translateX(5px);
+  box-shadow: 6px 6px 0 #000;
+}
+
+.character-card h3,
+.character-card p {
+  margin: 0;
+}
+
+.character-card h3 {
+  font-size: 22px;
+}
+
+.character-state {
+  min-height: 20px;
+  color: #514225;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.character-preview {
+  position: relative;
+  width: 76px;
+  height: 92px;
+  image-rendering: pixelated;
+}
+
+.character-preview span {
+  position: absolute;
+  display: block;
+}
+
+.preview-shadow {
+  left: 16px;
+  bottom: 8px;
+  width: 44px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.preview-leg {
+  bottom: 11px;
+  width: 14px;
+  height: 24px;
+  background: #2f3542;
+}
+
+.preview-leg-left {
+  left: 22px;
+}
+
+.preview-leg-right {
+  right: 22px;
+}
+
+.preview-body {
+  left: 18px;
+  top: 38px;
+  width: 40px;
+  height: 34px;
+  border: 3px solid #151515;
+}
+
+.preview-pack {
+  left: 11px;
+  top: 44px;
+  width: 12px;
+  height: 30px;
+  border: 3px solid #151515;
+  background: #3056a3;
+}
+
+.preview-head {
+  left: 22px;
+  top: 15px;
+  width: 32px;
+  height: 28px;
+  border: 3px solid #151515;
+  background: #f0c39b;
+}
+
+.preview-hair {
+  left: 20px;
+  top: 10px;
+  width: 36px;
+  height: 12px;
+  background: #2b2b32;
+}
+
+.preview-cap {
+  left: 16px;
+  top: 6px;
+  width: 34px;
+  height: 9px;
+  background: #f4c542;
+}
+
+.preview-eye {
+  top: 27px;
+  width: 5px;
+  height: 5px;
+  background: #151515;
+}
+
+.preview-eye-left {
+  left: 30px;
+}
+
+.preview-eye-right {
+  right: 30px;
+}
+
+.preview-hair-side {
+  top: 22px;
+  width: 8px;
+  height: 28px;
+  background: #2b2b32;
+}
+
+.preview-hair-left {
+  left: 17px;
+}
+
+.preview-hair-right {
+  right: 17px;
+}
+
+.character-preview-male .preview-body {
+  background: #d8484f;
+}
+
+.character-preview-female .preview-body {
+  background: #2fa38b;
+}
+
+.character-preview-female .preview-pack {
+  background: #7650b8;
 }
 
 .journal-tabs {
@@ -574,7 +1002,9 @@ canvas {
   .quest-row,
   .info-content,
   .journal-tabs,
-  .journal-grid {
+  .journal-grid,
+  .character-options,
+  .map-layout {
     grid-template-columns: 1fr;
   }
 

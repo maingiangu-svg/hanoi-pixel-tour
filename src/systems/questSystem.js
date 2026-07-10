@@ -1,5 +1,5 @@
 import { runtime, state, ui } from "../state.js";
-import { areaQuests } from "../data/quests.js";
+import { areaQuests, sideQuests } from "../data/quests.js";
 import { getCorrectQuizCount } from "../utils/helpers.js";
 import { formatMoney } from "../utils/format.js";
 import { saveGame } from "../storage.js";
@@ -23,6 +23,11 @@ export function closeQuestLog() {
 export function renderQuestLog() {
   ui.questContent.innerHTML = "";
 
+  const mainHeading = document.createElement("h3");
+  mainHeading.className = "quest-heading";
+  mainHeading.textContent = "Tuyến chính";
+  ui.questContent.appendChild(mainHeading);
+
   const list = document.createElement("ul");
   list.className = "quest-list";
   getQuestObjectives().forEach((objective) => {
@@ -40,6 +45,7 @@ export function renderQuestLog() {
   });
 
   ui.questContent.appendChild(list);
+  renderSideQuestLog();
 }
 
 export function getQuestObjectives() {
@@ -86,10 +92,17 @@ export function getQuestObjectives() {
 
 export function getCurrentObjective() {
   const next = getQuestObjectives().find((objective) => !objective.done);
-  return next ? next.text : "Chuyến đi đã hoàn thành!";
+  if (next) {
+    return next.text;
+  }
+
+  const sideQuest = sideQuests.find((quest) => !isSideQuestCompleted(quest) && isSideQuestStarted(quest));
+  return sideQuest ? `Nhiệm vụ phụ: ${sideQuest.title}` : "Chuyến đi đã hoàn thành!";
 }
 
 export function checkVictory() {
+  checkSideQuests();
+
   if (state.victoryShown) {
     
     return;
@@ -138,6 +151,8 @@ export function checkAreaQuests(extraRewards = []) {
       showMessage(`Hoàn thành nhiệm vụ khu ${quest.name}! Bạn nhận ${formatMoney(quest.reward)}.`);
     }
   });
+
+  checkSideQuests(extraRewards);
 }
 
 export function handlePendingVictory() {
@@ -147,3 +162,146 @@ export function handlePendingVictory() {
   }
 }
 
+function renderSideQuestLog() {
+  const heading = document.createElement("h3");
+  heading.className = "quest-heading";
+  heading.textContent = "Nhiệm vụ phụ";
+  ui.questContent.appendChild(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "side-quest-grid";
+
+  sideQuests.forEach((quest) => {
+    const completed = isSideQuestCompleted(quest);
+    const started = isSideQuestStarted(quest);
+    const card = document.createElement("article");
+    card.className = `side-quest-card ${completed ? "is-done" : started ? "is-active" : "is-available"}`;
+
+    const title = document.createElement("h4");
+    title.textContent = quest.title;
+    const description = document.createElement("p");
+    description.className = "side-quest-description";
+    description.textContent = quest.description;
+
+    const meta = document.createElement("p");
+    meta.className = "side-quest-meta";
+    meta.textContent = `${completed ? "Xong" : started ? "Đang làm" : "Có thể nhận"} · Thưởng ${formatMoney(quest.reward)}`;
+
+    const list = document.createElement("ul");
+    list.className = "quest-list side-quest-objectives";
+    quest.objectives.forEach((objective) => {
+      const item = document.createElement("li");
+      const done = isObjectiveDone(objective);
+      item.className = `quest-row ${done ? "is-done" : "is-pending"}`;
+
+      const stateText = document.createElement("span");
+      stateText.className = "quest-state";
+      stateText.textContent = done ? "Xong" : "Đang làm";
+
+      const body = document.createElement("span");
+      body.textContent = `${objective.text} ${getObjectiveProgress(objective)}`;
+      item.append(stateText, body);
+      list.appendChild(item);
+    });
+
+    card.append(title, description, meta, list);
+    grid.appendChild(card);
+  });
+
+  ui.questContent.appendChild(grid);
+}
+
+export function checkSideQuests(extraRewards = []) {
+  let completedAny = false;
+
+  sideQuests.forEach((quest) => {
+    if (isSideQuestCompleted(quest) || !isSideQuestStarted(quest)) {
+      return;
+    }
+
+    if (!quest.objectives.every(isObjectiveDone)) {
+      return;
+    }
+
+    state.completedTasks[getSideQuestTaskKey(quest)] = true;
+    state.money += quest.reward;
+    completedAny = true;
+    const message = `Hoàn thành nhiệm vụ "${quest.title}", nhận ${formatMoney(quest.reward)}.`;
+    extraRewards.push(message);
+
+    if (!runtime.activeQuiz) {
+      showMessage(message);
+    }
+  });
+
+  if (completedAny) {
+    saveGame();
+  }
+
+  return extraRewards;
+}
+
+function isSideQuestCompleted(quest) {
+  return Boolean(state.completedTasks[getSideQuestTaskKey(quest)]);
+}
+
+function isSideQuestStarted(quest) {
+  return isSideQuestCompleted(quest) || quest.objectives.some(isObjectiveDone);
+}
+
+function getSideQuestTaskKey(quest) {
+  return `sideQuest_${quest.id}`;
+}
+
+function isObjectiveDone(objective) {
+  if (objective.type === "stamp") {
+    return state.inventory.stamps.includes(objective.value);
+  }
+
+  if (objective.type === "food") {
+    return state.eatenFoods.includes(objective.value);
+  }
+
+  if (objective.type === "task") {
+    return Boolean(state.completedTasks[objective.value]);
+  }
+
+  if (objective.type === "map") {
+    return state.visitedMaps.includes(objective.value);
+  }
+
+  if (objective.type === "item") {
+    return state.inventory.specialItems.includes(objective.value) ||
+      state.inventory.foods.includes(objective.value) ||
+      state.inventory.souvenirs.includes(objective.value) ||
+      state.inventory.stamps.includes(objective.value);
+  }
+
+  if (objective.type === "vehicleOwned") {
+    return Boolean(state.vehicle?.owned && state.vehicle.type === objective.value);
+  }
+
+  if (objective.type === "visitedMapCount") {
+    return new Set(state.visitedMaps).size >= objective.value;
+  }
+
+  if (objective.type === "quizCount") {
+    return getCorrectQuizCount() >= objective.value;
+  }
+
+  return false;
+}
+
+function getObjectiveProgress(objective) {
+  if (objective.type === "visitedMapCount") {
+    const count = new Set(state.visitedMaps).size;
+    return `(${Math.min(count, objective.value)}/${objective.value})`;
+  }
+
+  if (objective.type === "quizCount") {
+    const count = getCorrectQuizCount();
+    return `(${Math.min(count, objective.value)}/${objective.value})`;
+  }
+
+  return isObjectiveDone(objective) ? "(1/1)" : "(0/1)";
+}

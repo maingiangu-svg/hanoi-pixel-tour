@@ -1,6 +1,7 @@
 import { createDefaultState, player, runtime, SAVE_KEY, setState, state } from "./state.js";
 import { foodCatalog } from "./data/foods.js";
 import { maps } from "./data/maps.js";
+import { VINFAST_VEHICLE_ID, vehicleCatalog } from "./data/vehicles.js";
 import { findLandmark, getLandmarkIdsFromStamps } from "./utils/helpers.js";
 import { isOverlayOpen, showMessage } from "./systems/modal.js";
 
@@ -35,6 +36,8 @@ export function normalizeState(saved) {
     ...saved,
     currentMapId: maps[saved.currentMapId] ? saved.currentMapId : base.currentMapId,
     player: { ...base.player, ...(saved.player || {}) },
+    profile: normalizeProfile(saved),
+    vehicle: normalizeVehicle(saved),
     inventory: { ...base.inventory, ...(saved.inventory || {}) },
     completedQuizzes,
     completedTasks: { ...base.completedTasks, ...(saved.completedTasks || {}) },
@@ -52,6 +55,23 @@ export function normalizeState(saved) {
     money: Number.isFinite(saved.money) ? saved.money : base.money,
     freeReturnUsed: Boolean(saved.freeReturnUsed),
     victoryShown: Boolean(saved.victoryShown)
+  };
+}
+
+function normalizeProfile(saved) {
+  const gender = saved?.profile?.gender || saved?.playerProfile?.gender || saved?.gender;
+  return {
+    gender: ["male", "female"].includes(gender) ? gender : null
+  };
+}
+
+function normalizeVehicle(saved) {
+  const rawVehicle = saved?.vehicle || {};
+  const type = vehicleCatalog[rawVehicle.type] ? rawVehicle.type : VINFAST_VEHICLE_ID;
+  return {
+    owned: Boolean(rawVehicle.owned),
+    type,
+    equipped: false
   };
 }
 
@@ -76,12 +96,12 @@ export function saveGameThrottled() {
 
 export function confirmReset() {
   if (isOverlayOpen()) {
-    return;
+    return false;
   }
 
   const ok = window.confirm("Bạn có chắc muốn xoá tiến trình và bắt đầu lại chuyến đi không?");
   if (!ok) {
-    return;
+    return false;
   }
 
   try {
@@ -95,5 +115,5 @@ export function confirmReset() {
   player.facing = "down";
   showMessage("Tiến trình đã được đặt lại. Chúc bạn có một chuyến khám phá Hà Nội mới!");
   saveGame();
-  
+  return true;
 }

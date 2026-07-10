@@ -1,6 +1,8 @@
 import { state, ui } from "../state.js";
 import { formatMoney } from "../utils/format.js";
 import { closePanelOverlays } from "./modal.js";
+import { openCharacterSelection } from "./characterSelection.js";
+import { getVehicleData, isRidingVehicle, isVehicleOwned } from "./vehicle.js";
 
 export function toggleInventory() {
   if (!ui.inventoryPanel.classList.contains("hidden")) {
@@ -24,7 +26,18 @@ export function renderInventory() {
   stats.className = "panel-grid";
   stats.appendChild(createStatCard("Tiền", formatMoney(state.money)));
   stats.appendChild(createStatCard("Khu đã ghé", `${state.visitedMaps.length}/3`));
+  stats.appendChild(createStatCard("Nhân vật", getGenderLabel()));
+  stats.appendChild(createStatCard("Phương tiện", getVehicleLabel()));
   ui.inventoryContent.appendChild(stats);
+
+  const actions = document.createElement("div");
+  actions.className = "inventory-actions";
+  const changeCharacter = document.createElement("button");
+  changeCharacter.type = "button";
+  changeCharacter.textContent = "Đổi nhân vật";
+  changeCharacter.addEventListener("click", () => openCharacterSelection({ allowClose: true }));
+  actions.appendChild(changeCharacter);
+  ui.inventoryContent.appendChild(actions);
 
   const grid = document.createElement("div");
   grid.className = "panel-grid";
@@ -71,4 +84,23 @@ export function createInventorySection(title, items) {
   });
   section.appendChild(list);
   return section;
+}
+
+function getGenderLabel() {
+  if (state.profile.gender === "female") {
+    return "Nữ";
+  }
+  if (state.profile.gender === "male") {
+    return "Nam";
+  }
+  return "Chưa chọn";
+}
+
+function getVehicleLabel() {
+  if (!isVehicleOwned()) {
+    return "Chưa có";
+  }
+
+  const vehicle = getVehicleData();
+  return isRidingVehicle() ? `${vehicle.name} (đang lái)` : `${vehicle.name} (đang cất)`;
 }

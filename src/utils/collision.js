@@ -2,7 +2,24 @@ import { player } from "../state.js";
 import { getCurrentMap } from "./helpers.js";
 
 export function isPlayerAreaWalkable(x, y) {
-  const feet = getPlayerFeet(x, y);
+  return isFeetAreaWalkable(getPlayerFeet(x, y));
+}
+
+export function isVehicleAreaWalkable(x, y) {
+  return isFeetAreaWalkable(getVehicleFeet(x, y), { vehicle: true });
+}
+
+export function hasVehicleClearance(x, y) {
+  return [
+    [0, 0],
+    [6, 0],
+    [-6, 0],
+    [0, 6],
+    [0, -6]
+  ].every(([dx, dy]) => isVehicleAreaWalkable(x + dx, y + dy));
+}
+
+function isFeetAreaWalkable(feet, options = {}) {
   const map = getCurrentMap();
   const worldWidth = map.width || 1024;
   const worldHeight = map.height || 640;
@@ -31,7 +48,11 @@ export function isPlayerAreaWalkable(x, y) {
     return false;
   }
 
-  return !getSolidObjects().some((solid) => rectsOverlap(feet, shrinkRect(solid, 2)));
+  const blockers = options.vehicle
+    ? [...getSolidObjects(), ...(map.vehicleBlocked || [])]
+    : getSolidObjects();
+
+  return !blockers.some((solid) => rectsOverlap(feet, shrinkRect(solid, 2)));
 }
 
 export function getPlayerFeet(x = player.x, y = player.y) {
@@ -43,11 +64,21 @@ export function getPlayerFeet(x = player.x, y = player.y) {
   };
 }
 
+export function getVehicleFeet(x = player.x, y = player.y) {
+  return {
+    x: x + 2,
+    y: y + player.height - 15,
+    width: player.width - 4,
+    height: 14
+  };
+}
+
 export function getSolidObjects() {
   const map = getCurrentMap();
   return [
     ...map.buildings,
     ...map.shops,
+    ...(map.vehicleShops || []),
     ...(map.collisionBlocks || []),
     ...map.landmarks.filter((landmark) => landmark.solid !== false)
   ];

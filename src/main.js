@@ -6,6 +6,7 @@ import { movePlayer } from "./systems/movement.js";
 import { updateNearbyInteractable } from "./systems/interaction.js";
 import { handlePendingVictory } from "./systems/questSystem.js";
 import { setInfoCloseHandler, showMessage } from "./systems/modal.js";
+import { initCharacterSelection, openCharacterSelection } from "./systems/characterSelection.js";
 import { addUnique, placePlayerAtSafeStart } from "./utils/helpers.js";
 import { isPlayerAreaWalkable } from "./utils/collision.js";
 import { drawGame } from "./render/renderGame.js";
@@ -28,10 +29,15 @@ function bootGame() {
   if (!isPlayerAreaWalkable(player.x, player.y)) placePlayerAtSafeStart(state.currentMapId);
   snapCameraToPlayer();
   addUnique(state.visitedMaps, state.currentMapId);
-  showMessage("Bắt đầu chuyến đi: hãy ghé Hồ Gươm, ăn đặc sản, sưu tầm tem và mở Sổ tay khám phá bằng phím J.");
   updateHud();
   saveGame();
   initInput();
+  initCharacterSelection();
+  if (state.profile.gender) {
+    showMessage("Bắt đầu chuyến đi: hãy ghé Hồ Gươm, ăn đặc sản, sưu tầm tem và mở Sổ tay khám phá bằng phím J.");
+  } else {
+    openCharacterSelection({ firstTime: true });
+  }
   gameLoop();
 }
 

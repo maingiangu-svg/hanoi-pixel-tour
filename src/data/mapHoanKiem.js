@@ -111,6 +111,7 @@ export const hoanKiemMap = {
       solid: false,
       range: 84,
       interactionPoint: { x: 1858, y: 718, radius: 44, visibleRange: 220, labelOffsetY: -32 },
+      quizId: "cauTheHuc",
       stamp: "Tem Cầu Thê Húc",
       souvenir: "Vé tham quan Cầu Thê Húc",
       description: "Cây cầu đỏ dẫn vào Đền Ngọc Sơn."
@@ -140,6 +141,7 @@ export const hoanKiemMap = {
       height: 194,
       range: 90,
       interactionPoint: { x: 2483, y: 792, radius: 50, visibleRange: 240, labelOffsetY: -36 },
+      quizId: "nhaThoLon",
       stamp: "Tem Nhà thờ Lớn Hà Nội",
       description: "Công trình kiến trúc nổi bật giữa khu phố trung tâm với quảng trường nhỏ phía trước."
     }
@@ -147,6 +149,18 @@ export const hoanKiemMap = {
   shops: [
     { id: "shopBunCha", foodId: "bunCha", x: 646, y: 626, width: 158, height: 78 },
     { id: "shopCaPheTrung", foodId: "caPheTrung", x: 976, y: 826, width: 166, height: 78 }
+  ],
+  vehicleShops: [
+    {
+      id: "vinfastHoanKiem",
+      name: "Đại lý VinFast Bờ Hồ",
+      vehicleId: "vinfast-electric",
+      x: 2160,
+      y: 1342,
+      width: 178,
+      height: 92,
+      interactionPoint: { x: 2180, y: 1304, radius: 48, visibleRange: 220, labelOffsetY: -34 }
+    }
   ],
   npcs: [
     {
@@ -178,6 +192,58 @@ export const hoanKiemMap = {
         quizId: "touristHoGuom",
         intro: "Bạn du khách muốn hỏi về Hồ Gươm. Hãy giúp bạn ấy trả lời nhé.",
         done: "Du khách mỉm cười và tặng bạn một bưu thiếp Hồ Gươm."
+      }
+    },
+    {
+      id: "coupleHoGuom",
+      name: "Đôi bạn bên hồ",
+      x: 1450,
+      y: 1240,
+      color: "#f59ac0",
+      activity: "couple",
+      task: {
+        type: "ambient",
+        taskId: "ambientCoupleHoGuom",
+        reward: 5000,
+        souvenir: "Ghi chú hẹn bên Hồ Gươm",
+        title: "Đôi bạn bên hồ",
+        intro: "Hai bạn trẻ đang ngồi nhìn mặt hồ và kể rằng phố đi bộ cuối tuần làm Hồ Gươm giống một phòng khách chung của thành phố.",
+        action: "Nghe câu chuyện",
+        done: "Hai bạn cười: Hà Nội đông nhưng vẫn có những góc rất chậm."
+      }
+    },
+    {
+      id: "danceGroupNhaTho",
+      name: "Nhóm nhảy phố đi bộ",
+      x: 2310,
+      y: 858,
+      color: "#f2bd45",
+      activity: "danceGroup",
+      task: {
+        type: "ambient",
+        taskId: "ambientDanceNhaTho",
+        reward: 5000,
+        souvenir: "Nhịp nhảy phố đi bộ",
+        title: "Nhóm nhảy phố đi bộ",
+        intro: "Một nhóm bạn đang tập động tác ngắn ở quảng trường nhỏ trước Nhà thờ Lớn, nhường lối cho người đi bộ qua lại.",
+        action: "Vỗ tay cổ vũ",
+        done: "Nhóm nhảy cảm ơn bạn và rủ bạn nhớ quay lại khu Nhà thờ vào buổi tối."
+      }
+    },
+    {
+      id: "foodResearcherHoanKiem",
+      name: "Nhà nghiên cứu ẩm thực",
+      x: 720,
+      y: 734,
+      color: "#caa6ff",
+      task: {
+        type: "quizChain",
+        taskId: "foodResearchHoanKiem",
+        quizIds: ["bunChaHistory", "caPheTrungHistory"],
+        reward: NPC_REWARD,
+        souvenir: "Phiếu ghi chép ẩm thực phố cổ",
+        intro: "Mình đang ghi chép về bún chả và cà phê trứng. Trả lời hai câu khó hơn một chút nhé.",
+        done: "Bạn đã giúp hoàn thiện ghi chép ẩm thực phố cổ."
       }
     }
   ],

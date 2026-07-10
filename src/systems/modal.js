@@ -2,24 +2,18 @@ import { runtime, state, ui } from "../state.js";
 import { foodDetails } from "../data/foods.js";
 import { landmarkDetails } from "../data/landmarks.js";
 import { formatMoney } from "../utils/format.js";
+import { activateSelectedButton, getSelectableButtons, moveSelection, renderButtonSelection } from "./selectableUI.js";
 
 let infoCloseHandler = null;
 export function setInfoCloseHandler(handler) { infoCloseHandler = handler; }
 
 function getInfoActionButtons() {
-  return Array.from(ui.infoActions.querySelectorAll("button"));
+  return getSelectableButtons(ui.infoActions);
 }
 
 export function renderInfoActionSelection() {
   const buttons = getInfoActionButtons();
-
-  buttons.forEach((button, index) => {
-    const label = button.dataset.actionLabel || button.textContent.replace(/^▶\s*/, "").trim();
-    button.dataset.actionLabel = label;
-    const selected = !ui.infoModal.classList.contains("hidden") && index === runtime.infoSelectedIndex;
-    button.classList.toggle("is-selected", selected);
-    button.textContent = selected ? `▶ ${label}` : label;
-  });
+  renderButtonSelection(buttons, runtime.infoSelectedIndex, !ui.infoModal.classList.contains("hidden"));
 }
 
 export function selectInfoAction(index) {
@@ -29,7 +23,7 @@ export function selectInfoAction(index) {
     return;
   }
 
-  runtime.infoSelectedIndex = (index + buttons.length) % buttons.length;
+  runtime.infoSelectedIndex = moveSelection(index, 0, buttons.length);
   renderInfoActionSelection();
 }
 
@@ -44,19 +38,48 @@ export function activateSelectedInfoAction() {
     return;
   }
 
-  const index = (runtime.infoSelectedIndex + buttons.length) % buttons.length;
-  const button = buttons[index];
-  if (!button || button.disabled) {
+  activateSelectedButton(buttons, runtime.infoSelectedIndex);
+}
+
+function getChoiceActionButtons() {
+  return getSelectableButtons(ui.choiceActions);
+}
+
+export function renderChoiceActionSelection() {
+  const buttons = getChoiceActionButtons();
+  renderButtonSelection(buttons, runtime.choiceSelectedIndex, !ui.choiceModal.classList.contains("hidden"));
+}
+
+export function selectChoiceAction(index) {
+  const buttons = getChoiceActionButtons();
+  if (!buttons.length) {
+    runtime.choiceSelectedIndex = 0;
     return;
   }
 
-  button.click();
+  runtime.choiceSelectedIndex = moveSelection(index, 0, buttons.length);
+  renderChoiceActionSelection();
+}
+
+export function moveChoiceActionSelection(delta) {
+  selectChoiceAction(runtime.choiceSelectedIndex + delta);
+}
+
+export function activateSelectedChoiceAction() {
+  const buttons = getChoiceActionButtons();
+  if (!buttons.length) {
+    closeChoiceModal();
+    return;
+  }
+
+  activateSelectedButton(buttons, runtime.choiceSelectedIndex);
 }
 
 export function closePanelOverlays(keep = "") {
   if (keep !== "inventory") ui.inventoryPanel.classList.add("hidden");
   if (keep !== "quest") ui.questPanel.classList.add("hidden");
   if (keep !== "journal") ui.journalPanel.classList.add("hidden");
+  if (keep !== "map" && ui.mapPanel) ui.mapPanel.classList.add("hidden");
   closeChoiceModal();
 }
 
@@ -64,6 +87,7 @@ export function closeAllOverlays() {
   ui.inventoryPanel.classList.add("hidden");
   ui.questPanel.classList.add("hidden");
   ui.journalPanel.classList.add("hidden");
+  if (ui.mapPanel) ui.mapPanel.classList.add("hidden");
   closeChoiceModal();
   if (!ui.infoModal.classList.contains("hidden")) closeInfoModal();
 }
@@ -87,6 +111,7 @@ export function openChoiceModal({ tag, title, body, actions }) {
   actions.forEach((action) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.dataset.actionLabel = action.label;
     button.textContent = action.label;
     button.disabled = Boolean(action.disabled);
     if (action.className) {
@@ -96,12 +121,16 @@ export function openChoiceModal({ tag, title, body, actions }) {
     ui.choiceActions.appendChild(button);
   });
 
+  runtime.choiceSelectedIndex = 0;
   ui.choiceModal.classList.remove("hidden");
+  renderChoiceActionSelection();
   ui.nearbyHint.classList.add("hidden");
 }
 
 export function closeChoiceModal() {
   ui.choiceModal.classList.add("hidden");
+  runtime.choiceSelectedIndex = 0;
+  renderChoiceActionSelection();
 }
 
 export function openFoodInfoPanel(food, options = {}) {
@@ -211,7 +240,9 @@ export function isOverlayOpen() {
   return !ui.inventoryPanel.classList.contains("hidden") ||
     !ui.questPanel.classList.contains("hidden") ||
     !ui.journalPanel.classList.contains("hidden") ||
+    (ui.mapPanel && !ui.mapPanel.classList.contains("hidden")) ||
     !ui.infoModal.classList.contains("hidden") ||
     !ui.quizModal.classList.contains("hidden") ||
-    !ui.choiceModal.classList.contains("hidden");
+    !ui.choiceModal.classList.contains("hidden") ||
+    !ui.characterModal.classList.contains("hidden");
 }

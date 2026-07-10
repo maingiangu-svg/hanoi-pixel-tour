@@ -1,15 +1,15 @@
 import { ctx } from "../state.js";
 import { isRectVisible } from "../camera.js";
-import { getVisibleLandmarkInteractionPoints, isLandmarkPointDiscovered } from "../systems/interactionPoints.js";
+import { getVisibleInteractionPoints, isInteractionPointCompleted } from "../systems/interactionPoints.js";
 
 export function drawInteractionPoints(map) {
-  getVisibleLandmarkInteractionPoints(map).forEach((point) => {
+  getVisibleInteractionPoints(map).forEach((point) => {
     const rect = { x: point.x - 22, y: point.y - 30, width: 44, height: 52 };
     if (!isRectVisible(rect, 32)) {
       return;
     }
 
-    const discovered = isLandmarkPointDiscovered(point);
+    const discovered = isInteractionPointCompleted(point);
     drawPixelGlowPoint(point, discovered);
   });
 }

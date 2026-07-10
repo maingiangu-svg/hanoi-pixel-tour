@@ -1,7 +1,7 @@
 import { canvas, ctx, player, runtime } from "../state.js";
 import { camera } from "../camera.js";
 import { getCurrentMap } from "../utils/helpers.js";
-import { drawBackground, drawBuildings, drawExits, drawGroundPatches, drawLandmarks, drawNpcs, drawShops, drawWalkZones, drawWater } from "./renderMap.js";
+import { drawBackground, drawBuildings, drawExits, drawGroundPatches, drawLandmarks, drawNpcs, drawShops, drawVehicleShops, drawWalkZones, drawWater } from "./renderMap.js";
 import { drawDecorations } from "./renderDecorations.js";
 import { drawInteractionPoints } from "./renderInteractionPoints.js";
 import { drawPlayer } from "./renderPlayer.js";
@@ -20,6 +20,7 @@ export function drawGame() {
   drawBuildings(map);
   drawLandmarks(map);
   drawShops(map);
+  drawVehicleShops(map);
   drawExits(map);
   drawDecorations(map, "front");
   drawInteractionPoints(map);

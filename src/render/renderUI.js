@@ -4,6 +4,7 @@ import { formatMoney } from "../utils/format.js";
 import { renderInventory } from "../systems/inventory.js";
 import { renderJournal } from "../systems/journal.js";
 import { getCurrentObjective, renderQuestLog } from "../systems/questSystem.js";
+import { getVehicleData, isRidingVehicle, isVehicleOwned } from "../systems/vehicle.js";
 
 export function drawPixelRect(x, y, width, height, fill, stroke, strokeWidth) {
   ctx.fillStyle = fill;
@@ -64,6 +65,16 @@ export function updateHud() {
   ui.hudStamps.textContent = `${state.inventory.stamps.length}`;
   ui.hudFoods.textContent = `${state.eatenFoods.length}`;
   ui.hudObjective.textContent = getCurrentObjective();
+
+  if (isVehicleOwned()) {
+    const vehicle = getVehicleData();
+    ui.vehicleStatus.textContent = isRidingVehicle()
+      ? `Đang lái VinFast · V cất xe`
+      : `${vehicle.name} · V gọi xe`;
+    ui.vehicleStatus.classList.remove("hidden");
+  } else {
+    ui.vehicleStatus.classList.add("hidden");
+  }
 
   if (!ui.inventoryPanel.classList.contains("hidden")) {
     renderInventory();
