@@ -1,7 +1,7 @@
 import { keys, runtime, ui } from "./state.js";
 import { interact } from "./systems/interaction.js";
 import { toggleInventory } from "./systems/inventory.js";
-import { toggleJournal } from "./systems/journal.js";
+import { handleJournalKey, isJournalOpen, toggleJournal } from "./systems/journal.js";
 import { toggleQuestLog } from "./systems/questSystem.js";
 import { answerQuiz, closeQuiz, confirmSelectedQuizOption, moveQuizSelection, selectQuizOption } from "./systems/quiz.js";
 import { confirmReset } from "./storage.js";
@@ -9,9 +9,12 @@ import { activateSelectedChoiceAction, activateSelectedInfoAction, closeAllOverl
 import { handleCharacterSelectionKey, isCharacterSelectionOpen, openCharacterSelection } from "./systems/characterSelection.js";
 import { toggleVehicle } from "./systems/vehicle.js";
 import { closeMapOverlay, isMapOverlayOpen, toggleMapOverlay } from "./systems/mapOverlay.js";
+import { closeAudioSettings, isAudioSettingsOpen } from "./systems/audioManager.js";
+import { triggerVehicleHorn } from "./systems/npcReactions.js";
+import { handlePhotoModeKey, isPhotoModeActive, togglePhotoMode } from "./systems/photoMode.js";
 
 const movementKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"];
-const handledKeys = [...movementKeys, " ", "enter", "escape", "e", "i", "q", "j", "m", "r", "v"];
+const handledKeys = [...movementKeys, " ", "enter", "escape", "e", "h", "i", "q", "j", "m", "p", "r", "tab", "v"];
 const verticalKeys = {
   arrowup: -1,
   w: -1,
@@ -39,6 +42,11 @@ export function initInput() {
       if (key === "m" || key === "escape" || key === "enter") {
         closeMapOverlay();
       }
+      return;
+    }
+
+    if (isAudioSettingsOpen()) {
+      if (key === "escape") closeAudioSettings();
       return;
     }
 
@@ -96,6 +104,16 @@ export function initInput() {
       return;
     }
 
+    if (isPhotoModeActive()) {
+      handlePhotoModeKey(key);
+      return;
+    }
+
+    if (isJournalOpen()) {
+      handleJournalKey(key);
+      return;
+    }
+
     if (isPanelOverlayOpen()) {
       if (["enter", "escape"].includes(key)) {
         closeAllOverlays();
@@ -118,7 +136,9 @@ export function initInput() {
     if (key === "q") toggleQuestLog();
     if (key === "j") toggleJournal();
     if (key === "m") toggleMapOverlay();
+    if (key === "p") togglePhotoMode();
     if (key === "v") toggleVehicle();
+    if (key === "h") triggerVehicleHorn();
     if (key === "r" && confirmReset()) openCharacterSelection({ firstTime: true });
     if (key === "escape") {
       closeAllOverlays();

@@ -1,5 +1,6 @@
 import { foodCatalog } from "./foods.js";
 import { vehicleCatalog } from "./vehicles.js";
+import { getPhotoSpotsForMap } from "./photoSpots.js";
 
 const IMPORTANT_ZONE_KINDS = new Set(["road", "bridge", "plaza", "courtyard", "sidewalk", "path"]);
 
@@ -51,6 +52,13 @@ export function getMapOverlayData(map) {
       y: map.companionReturnPoint.y,
       kind: "companionReturn"
     } : null,
+    photoSpots: getPhotoSpotsForMap(map.id).map((spot) => ({
+      id: spot.id,
+      name: spot.title,
+      x: spot.x,
+      y: spot.y,
+      kind: "photo"
+    })),
     exits: (map.exits || []).map((exit) => ({
       id: exit.id,
       name: exit.name,

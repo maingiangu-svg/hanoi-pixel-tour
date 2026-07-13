@@ -1,6 +1,7 @@
 import { ctx } from "../state.js";
 import { isRectVisible } from "../camera.js";
 import { drawPixelRect } from "./renderUI.js";
+import { drawGroundShadow, drawTallPixelShadow } from "./renderPixelEffects.js";
 
 export function drawDecorations(map, layer) {
   map.decorations.forEach((decoration) => {
@@ -8,7 +9,7 @@ export function drawDecorations(map, layer) {
       return;
     }
 
-    const frontTypes = ["lamp", "flag", "stall", "bench", "planter", "sign", "streetSign", "trashBin", "electricBox", "bicycle", "crate", "banner", "rail", "lotus", "motorbike", "powerPole", "khueVanCac", "stele", "bridgeTruss"];
+    const frontTypes = ["lamp", "flag", "stall", "bench", "planter", "sign", "streetSign", "trafficSign", "trashBin", "electricBox", "bicycle", "crate", "banner", "rail", "lotus", "motorbike", "powerPole", "khueVanCac", "stele", "bridgeTruss", "teaCorner", "plasticStools", "streetVendor"];
     const isFront = frontTypes.includes(decoration.type);
     if ((layer === "front" && !isFront) || (layer === "behind" && isFront)) {
       return;
@@ -86,6 +87,24 @@ export function drawDecorations(map, layer) {
     if (decoration.type === "bicycle") {
       drawBicycle(decoration.x, decoration.y);
     }
+    if (decoration.type === "trafficSign") {
+      drawTrafficSign(decoration.x, decoration.y, decoration.direction || "right");
+    }
+    if (decoration.type === "teaCorner") {
+      drawTeaCorner(decoration.x, decoration.y, decoration.color || "#2f8ec5");
+    }
+    if (decoration.type === "plasticStools") {
+      drawPlasticStoolGroup(decoration.x, decoration.y);
+    }
+    if (decoration.type === "streetVendor") {
+      drawStreetVendor(decoration.x, decoration.y, decoration.text || "HÀNG RONG");
+    }
+    if (decoration.type === "pocketParking") {
+      drawPocketParking(decoration.x, decoration.y, decoration.width || 160, decoration.height || 72);
+    }
+    if (decoration.type === "alleyMouth") {
+      drawAlleyMouth(decoration.x, decoration.y, decoration.width || 96, decoration.text || "NGÕ");
+    }
   });
 }
 
@@ -99,6 +118,7 @@ function getDecorationRect(decoration) {
 }
 
 export function drawTree(x, y) {
+  drawGroundShadow(x + 14, y + 31, 34, 7);
   ctx.fillStyle = "#5b3c25";
   ctx.fillRect(x + 10, y + 18, 8, 18);
   ctx.fillStyle = "#2f8f46";
@@ -109,6 +129,8 @@ export function drawTree(x, y) {
 }
 
 export function drawLamp(x, y) {
+  drawTallPixelShadow(x + 8, y + 38, 32, 3);
+  drawGroundShadow(x + 8, y + 38, 15, 4);
   ctx.fillStyle = "#2b2b32";
   ctx.fillRect(x + 6, y + 8, 5, 30);
   ctx.fillStyle = "#f5e773";
@@ -147,8 +169,7 @@ export function drawMarketStall(x, y) {
 }
 
 export function drawBench(x, y) {
-  ctx.fillStyle = "rgba(0,0,0,0.18)";
-  ctx.fillRect(x + 3, y + 15, 42, 6);
+  drawGroundShadow(x + 23, y + 20, 46, 6);
   ctx.fillStyle = "#71452b";
   ctx.fillRect(x, y + 4, 46, 7);
   ctx.fillRect(x, y + 14, 46, 6);
@@ -231,20 +252,26 @@ export function drawTurtleTower(x, y) {
 }
 
 export function drawLakeRail(x, y, width, height) {
-  ctx.fillStyle = "#d6c57a";
+  ctx.fillStyle = "#6c5c45";
   for (let px = x; px < x + width; px += 28) {
-    ctx.fillRect(px, y, 16, 5);
-    ctx.fillRect(px, y + height, 16, 5);
+    ctx.fillRect(px, y, 18, 4);
+    ctx.fillRect(px, y + height, 18, 4);
+    ctx.fillRect(px + 2, y - 5, 4, 13);
+    ctx.fillRect(px + 2, y + height - 5, 4, 13);
   }
   for (let py = y + 20; py < y + height - 12; py += 28) {
-    ctx.fillRect(x, py, 5, 16);
-    ctx.fillRect(x + width, py, 5, 16);
+    ctx.fillRect(x, py, 4, 18);
+    ctx.fillRect(x + width, py, 4, 18);
+    ctx.fillRect(x - 5, py + 2, 13, 4);
+    ctx.fillRect(x + width - 5, py + 2, 13, 4);
   }
+  ctx.fillStyle = "#d6c57a";
+  ctx.fillRect(x - 5, y - 5, 9, 5);
+  ctx.fillRect(x + width - 4, y - 5, 9, 5);
 }
 
 export function drawMotorbike(x, y) {
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.fillRect(x + 2, y + 18, 42, 6);
+  drawGroundShadow(x + 23, y + 18, 42, 6);
   ctx.fillStyle = "#151515";
   ctx.fillRect(x + 4, y + 20, 10, 10);
   ctx.fillRect(x + 32, y + 20, 10, 10);
@@ -257,6 +284,8 @@ export function drawMotorbike(x, y) {
 }
 
 export function drawPowerPole(x, y) {
+  drawTallPixelShadow(x + 12, y + 64, 54, 4);
+  drawGroundShadow(x + 12, y + 64, 18, 5);
   ctx.fillStyle = "#4a3728";
   ctx.fillRect(x + 8, y, 8, 64);
   ctx.fillRect(x - 8, y + 14, 40, 5);
@@ -271,8 +300,7 @@ export function drawPowerPole(x, y) {
 }
 
 export function drawKhueVanCac(x, y) {
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.fillRect(x + 5, y + 70, 124, 10);
+  drawGroundShadow(x + 67, y + 74, 124, 10);
   drawPixelRect(x + 20, y + 50, 90, 34, "#d7b465", "#151515", 3);
   ctx.fillStyle = "#9f3e35";
   ctx.fillRect(x + 6, y + 28, 118, 28);
@@ -376,4 +404,97 @@ export function drawBicycle(x, y) {
   ctx.lineTo(x + 13, y + 22);
   ctx.lineTo(x + 18, y + 10);
   ctx.stroke();
+}
+
+export function drawTrafficSign(x, y, direction) {
+  drawTallPixelShadow(x + 12, y + 48, 34, 3);
+  ctx.fillStyle = "#34383e";
+  ctx.fillRect(x + 10, y + 18, 5, 32);
+  drawPixelRect(x, y, 26, 22, "#f7f1dc", "#151515", 2);
+  ctx.fillStyle = "#c9413a";
+  ctx.fillRect(x + 3, y + 3, 20, 4);
+  ctx.fillRect(x + 3, y + 15, 20, 4);
+  ctx.fillRect(x + 3, y + 3, 4, 16);
+  ctx.fillRect(x + 19, y + 3, 4, 16);
+  ctx.fillStyle = "#315f8f";
+  if (direction === "left") {
+    ctx.fillRect(x + 7, y + 9, 11, 4);
+    ctx.fillRect(x + 7, y + 7, 4, 8);
+  } else {
+    ctx.fillRect(x + 8, y + 9, 11, 4);
+    ctx.fillRect(x + 15, y + 7, 4, 8);
+  }
+}
+
+export function drawTeaCorner(x, y, color) {
+  drawGroundShadow(x + 30, y + 34, 72, 7);
+  drawPlasticStool(x, y + 23, "#d8484f");
+  drawPlasticStool(x + 48, y + 25, color);
+  drawPlasticStool(x + 7, y + 43, "#f2bd45");
+  drawPixelRect(x + 16, y + 20, 34, 16, "#845638", "#151515", 2);
+  ctx.fillStyle = "#dce6e8";
+  ctx.fillRect(x + 25, y + 6, 9, 16);
+  ctx.fillStyle = "#6f8994";
+  ctx.fillRect(x + 27, y + 3, 5, 5);
+  ctx.fillStyle = "#2f8ec5";
+  ctx.fillRect(x + 20, y + 15, 5, 5);
+  ctx.fillRect(x + 38, y + 15, 5, 5);
+  ctx.fillStyle = "#8de097";
+  ctx.fillRect(x + 45, y + 13, 4, 7);
+}
+
+export function drawPlasticStoolGroup(x, y) {
+  drawGroundShadow(x + 32, y + 20, 64, 6);
+  drawPlasticStool(x, y, "#d8484f");
+  drawPlasticStool(x + 22, y + 6, "#2f8ec5");
+  drawPlasticStool(x + 44, y + 1, "#f2bd45");
+}
+
+export function drawStreetVendor(x, y, text) {
+  drawGroundShadow(x + 44, y + 40, 86, 7);
+  ctx.fillStyle = "#151515";
+  ctx.fillRect(x + 8, y + 34, 12, 12);
+  ctx.fillRect(x + 60, y + 34, 12, 12);
+  drawPixelRect(x + 12, y + 16, 56, 24, "#c78b45", "#151515", 2);
+  ctx.fillStyle = "#d8484f";
+  ctx.fillRect(x + 5, y + 8, 70, 10);
+  ctx.fillStyle = "#fff3c4";
+  ctx.font = "700 7px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(text, x + 40, y + 15);
+  ctx.fillStyle = "#4a3728";
+  ctx.fillRect(x + 72, y + 2, 4, 40);
+}
+
+export function drawPocketParking(x, y, width, height) {
+  drawPixelRect(x, y, width, height, "#484d54", "#24272c", 3);
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  for (let bayX = x + 14; bayX < x + width - 18; bayX += 54) {
+    ctx.fillRect(bayX, y + 8, 3, height - 16);
+    ctx.fillRect(bayX, y + height - 11, 40, 3);
+  }
+  ctx.fillStyle = "#f2bd45";
+  ctx.fillRect(x + 8, y + 8, 16, 4);
+}
+
+export function drawAlleyMouth(x, y, width, text) {
+  ctx.fillStyle = "rgba(47,45,42,0.32)";
+  ctx.fillRect(x, y, width, 34);
+  ctx.fillStyle = "#7a7368";
+  for (let tileX = x + 5; tileX < x + width - 4; tileX += 18) {
+    ctx.fillRect(tileX, y + 24, 12, 3);
+  }
+  ctx.fillStyle = "#315f8f";
+  ctx.fillRect(x + 6, y - 10, Math.min(54, width - 12), 15);
+  ctx.fillStyle = "#fff8d6";
+  ctx.font = "700 8px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(text, x + Math.min(54, width - 12) / 2 + 6, y + 1);
+}
+
+function drawPlasticStool(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 16, 8);
+  ctx.fillRect(x + 2, y + 8, 3, 8);
+  ctx.fillRect(x + 11, y + 8, 3, 8);
 }

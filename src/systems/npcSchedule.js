@@ -3,6 +3,7 @@ import { CHURCH_SERVICE_TIMES, MO_CHILDREN, MO_SCHEDULE } from "../data/npcSched
 import { runtime, state } from "../state.js";
 import { GAME_MINUTES_PER_DAY, getMinuteOfDay } from "../utils/gameTime.js";
 import { getMoCompanionNpc, isMoCompanionActive, updateMoCompanion } from "./moCompanion.js";
+import { getScheduledChildCount, updateWorldSchedules } from "./worldSchedule.js";
 
 const MINUTES = {
   morningWashEnd: 8 * 60,
@@ -28,6 +29,7 @@ const congregation = CHURCH_LAYOUT.congregationSeats.map((seat, index) => ({
   color: ["#5b77a8", "#9b5b68", "#8c7650", "#4d8b72"][index % 4]
 }));
 const quietVisitors = congregation.slice(0, 3);
+const childGroups = Array.from({ length: MO_CHILDREN.length + 1 }, (_, count) => MO_CHILDREN.slice(0, count));
 const scheduledNpcsByMap = {
   hoanKiem: [],
   churchInterior: []
@@ -40,6 +42,7 @@ export function updateNpcSchedules() {
   const service = updateChurchService(minuteOfDay);
   updateScheduledNpcLists(companionActive ? null : mo, service);
   updateScheduledCollisionBlocks(mo, service);
+  updateWorldSchedules();
 }
 
 export function getScheduledNpcsForMap(map) {
@@ -59,8 +62,8 @@ export function getChurchService() {
 }
 
 export function getMoChildren() {
-  const minuteOfDay = getMinuteOfDay(state.gameTime);
-  return minuteOfDay >= MINUTES.morningStart && minuteOfDay < MINUTES.nightStart ? MO_CHILDREN : [];
+  const count = getScheduledChildCount(getMinuteOfDay(state.gameTime));
+  return childGroups[Math.min(MO_CHILDREN.length, count)];
 }
 
 export function isMassInProgress() {

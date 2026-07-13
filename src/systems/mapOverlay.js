@@ -4,6 +4,8 @@ import { getMapOverlayData } from "../data/mapOverlay.js";
 import { getCurrentMap } from "../utils/helpers.js";
 import { getCurrentObjective } from "./questSystem.js";
 import { closePanelOverlays, isOverlayOpen } from "./modal.js";
+import { getWeatherLabel } from "./weather.js";
+import { hasCapturedPhotoSpot, isPhotoSpotKnown } from "./photoMode.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MAP_WIDTH = 680;
@@ -58,6 +60,7 @@ export function renderMapOverlay() {
   side.className = "map-side";
   side.append(createMapStat("Khu vực", map.name));
   side.append(createMapStat("Vị trí", "Chấm đỏ là bạn"));
+  side.append(createMapStat("Thời tiết", getWeatherLabel()));
   side.append(createMapStat("Mục tiêu", getDisplayedObjective()));
   side.append(createLegend());
   side.append(createRouteList(data));
@@ -113,6 +116,19 @@ function createMapSvg(map, data) {
     const point = data.companionReturnPoint;
     addMarker(svg, point.x, point.y, transform, "map-marker map-marker-companion-return", "M", point.name);
   }
+
+  data.photoSpots.filter((spot) => isPhotoSpotKnown(spot.id)).forEach((spot) => {
+    const captured = hasCapturedPhotoSpot(spot.id);
+    addMarker(
+      svg,
+      spot.x,
+      spot.y,
+      transform,
+      `map-marker map-marker-photo ${captured ? "is-captured" : "is-known"}`,
+      captured ? "✓" : "▣",
+      captured ? spot.name : "Điểm chụp ảnh"
+    );
+  });
 
   data.landmarks.forEach((landmark) => {
     const discovered = isLandmarkCheckedIn(landmark);
@@ -244,7 +260,8 @@ function createLegend() {
     ["map-key-food", "Ẩm thực"],
     ["map-key-bus", "Chuyển khu"],
     ["map-key-parking", "Bãi gửi xe"],
-    ["map-key-companion-return", "Điểm hẹn của Mơ"]
+    ["map-key-companion-return", "Điểm hẹn của Mơ"],
+    ["map-key-photo", "Điểm chụp ảnh"]
   ].forEach(([className, text]) => {
     const item = document.createElement("p");
     const swatch = document.createElement("span");

@@ -6,9 +6,19 @@ import { addUnique } from "../utils/helpers.js";
 import { discoverFood } from "./journal.js";
 import { checkVictory } from "./questSystem.js";
 import { closeChoiceModal, openChoiceModal, openFoodInfoPanel, showMessage } from "./modal.js";
+import { getShopHoursText, isShopOpen } from "./worldSchedule.js";
 
 export function openShop(shop) {
   const food = foodCatalog[shop.foodId];
+  if (!isShopOpen(shop)) {
+    openChoiceModal({
+      tag: "Quán ăn",
+      title: food.name,
+      body: `Quán hiện đang đóng cửa.\nGiờ phục vụ: ${getShopHoursText(shop)}.`,
+      actions: [{ label: "Rời đi", className: "primary-choice", onClick: closeChoiceModal }]
+    });
+    return;
+  }
   const alreadyEaten = state.eatenFoods.includes(food.id);
   const body = `${food.name}\n${food.description}\nGiá: ${formatMoney(food.price)}`;
 

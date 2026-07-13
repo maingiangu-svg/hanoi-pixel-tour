@@ -9,6 +9,15 @@ export function isVehicleAreaWalkable(x, y) {
   return isFeetAreaWalkable(getVehicleFeet(x, y), { vehicle: true });
 }
 
+export function isNpcAreaWalkable(x, y, width = 24, height = 46) {
+  return isFeetAreaWalkable({
+    x: x + 4,
+    y: y + height - 11,
+    width: Math.max(8, width - 8),
+    height: 9
+  });
+}
+
 export function getVehicleRestrictedZoneAt(x, y) {
   return getVehicleRestrictedZoneForFeet(getVehicleFeet(x, y));
 }

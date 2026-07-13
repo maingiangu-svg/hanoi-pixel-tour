@@ -14,9 +14,10 @@
           <p class="kicker">Trò chơi giáo dục pixel</p>
           <h1>Hà Nội Pixel Tour</h1>
         </div>
-        <p class="guide">
-          E: Tương tác · I: Tủ đồ · Q: Nhiệm vụ · M: Bản đồ
-        </p>
+        <div class="guide">
+          <span>E Tương tác · P Ảnh · I Tủ đồ · Q Nhiệm vụ · J Sổ tay · M Bản đồ</span>
+          <button id="audioSettingsButton" class="guide-button" type="button" aria-label="Mở cài đặt âm thanh">Âm thanh</button>
+        </div>
       </div>
 
       <div class="game-frame">
@@ -30,6 +31,7 @@
           <div class="hud-pill hud-clock">
             <span class="hud-label">Thời gian</span>
             <strong id="hudClock">Ngày 1 · 07:00</strong>
+            <span id="hudWeather" class="weather-badge" data-weather="clear" title="Trời quang">QUANG</span>
           </div>
           <div class="hud-pill hud-objective">
             <span class="hud-label">Mục tiêu</span>
@@ -92,6 +94,40 @@
       </div>
       <div id="mapContent" class="panel-content"></div>
       <p class="info-hint">M: Mở/đóng bản đồ | Esc: Đóng</p>
+    </article>
+  </div>
+
+  <div id="settingsPanel" class="panel-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <article class="panel settings-panel">
+      <div class="panel-header">
+        <div>
+          <p class="modal-tag">Cài đặt</p>
+          <h2 id="settingsTitle">Âm thanh</h2>
+        </div>
+        <button id="closeSettings" class="panel-close" type="button">Đóng</button>
+      </div>
+      <div class="settings-list">
+        <label class="setting-toggle" for="soundEnabled">
+          <span>Âm thanh môi trường</span>
+          <input id="soundEnabled" type="checkbox" checked />
+        </label>
+        <label class="setting-row" for="masterVolume">
+          <span>Âm lượng tổng</span>
+          <input id="masterVolume" type="range" min="0" max="100" step="1" value="48" />
+          <output id="masterVolumeValue" for="masterVolume">48%</output>
+        </label>
+        <label class="setting-row" for="ambienceVolume">
+          <span>Âm lượng môi trường</span>
+          <input id="ambienceVolume" type="range" min="0" max="100" step="1" value="42" />
+          <output id="ambienceVolumeValue" for="ambienceVolume">42%</output>
+        </label>
+        <label class="setting-row" for="effectsVolume">
+          <span>Âm lượng hiệu ứng</span>
+          <input id="effectsVolume" type="range" min="0" max="100" step="1" value="52" />
+          <output id="effectsVolumeValue" for="effectsVolume">52%</output>
+        </label>
+      </div>
+      <p class="info-hint">Âm thanh bắt đầu sau thao tác đầu tiên. Esc: Đóng</p>
     </article>
   </div>
 

@@ -10,6 +10,18 @@ import { drawAmbientVehicles } from "./renderAmbientVehicles.js";
 import { drawChurchInterior } from "./renderChurchInterior.js";
 import { drawScheduledNpcs } from "./renderScheduledNpcs.js";
 import { drawMapTransition } from "../systems/mapTransition.js";
+import { drawTimeOfDayTint, drawWorldLightAccents } from "./renderLighting.js";
+import {
+  drawPlayerWeatherEffects,
+  drawRainOverlay,
+  drawWeatherAtmosphere,
+  drawWetReflections,
+  drawWetSurfaceEffects
+} from "./renderWeather.js";
+import { isRidingVehicle } from "../systems/vehicle.js";
+import { drawAreaVisualAmbience } from "./renderAreaAmbience.js";
+import { drawVehicleHornIndicator } from "./renderNpcReactions.js";
+import { drawPhotoModeOverlay, drawPhotoSpots } from "./renderPhotoMode.js";
 
 export function drawGame() {
   const map = getCurrentMap();
@@ -17,33 +29,55 @@ export function drawGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
+  drawWorldBase(map);
+  ctx.restore();
+
+  drawTimeOfDayTint(map);
+  drawWeatherAtmosphere(map);
+
+  ctx.save();
+  ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
+  drawWorldLightAccents(map);
+  drawWetReflections(map);
+  drawAreaVisualAmbience(map);
+  drawPhotoSpots(map);
+  if (map.kind !== "churchInterior") {
+    drawAmbientVehicles(map);
+    drawNpcs(map);
+  }
+  if (!runtime.photoMode?.active) {
+    drawInteractionPoints(map);
+  }
+  drawScheduledNpcs(map);
+  drawInteractionHighlight();
+  drawPlayerWeatherEffects(isRidingVehicle());
+  drawPlayer();
+  drawVehicleHornIndicator();
+  ctx.restore();
+  drawRainOverlay(map);
+  drawPhotoModeOverlay();
+  drawMapTransition();
+}
+
+function drawWorldBase(map) {
   if (map.kind === "churchInterior") {
     drawChurchInterior(map);
     drawExits(map);
-    drawInteractionPoints(map);
-    drawScheduledNpcs(map);
   } else {
     drawBackground(map);
     drawGroundPatches(map);
     drawWater(map);
     drawWalkZones(map);
+    drawWetSurfaceEffects(map);
     drawDecorations(map, "behind");
     drawBuildings(map);
     drawLandmarks(map);
     drawShops(map);
     drawVehicleShops(map);
     drawParkingAreas(map);
-    drawAmbientVehicles(map);
     drawExits(map);
     drawDecorations(map, "front");
-    drawInteractionPoints(map);
-    drawNpcs(map);
-    drawScheduledNpcs(map);
   }
-  drawInteractionHighlight();
-  drawPlayer();
-  ctx.restore();
-  drawMapTransition();
 }
 
 export function drawInteractionHighlight() {

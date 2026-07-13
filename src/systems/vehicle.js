@@ -8,6 +8,8 @@ import { closeChoiceModal, isOverlayOpen, openChoiceModal, showMessage } from ".
 import { checkSideQuests } from "./questSystem.js";
 import { getVehicleParkingLabel, isVehicleParked, showVehicleRestrictionMessage } from "./parking.js";
 import { syncMoCompanionToPlayer } from "./moCompanion.js";
+import { getShopHoursText, isShopOpen } from "./worldSchedule.js";
+import { getPlayerVehicleSpeedMultiplier } from "./weather.js";
 
 export function getVehicleData() {
   const vehicleId = state.vehicle?.type || VINFAST_VEHICLE_ID;
@@ -24,7 +26,9 @@ export function isRidingVehicle() {
 
 export function getPlayerMoveSpeed() {
   const vehicle = getVehicleData();
-  return isRidingVehicle() ? player.speed * vehicle.speedMultiplier : player.speed;
+  return isRidingVehicle()
+    ? player.speed * vehicle.speedMultiplier * getPlayerVehicleSpeedMultiplier()
+    : player.speed;
 }
 
 export function toggleVehicle() {
@@ -86,6 +90,16 @@ export function dismountVehicle({ silent = false } = {}) {
 
 export function openVehicleShop(shop) {
   const vehicle = vehicleCatalog[shop.vehicleId] || vehicleCatalog[VINFAST_VEHICLE_ID];
+
+  if (!isShopOpen(shop)) {
+    openChoiceModal({
+      tag: "VinFast",
+      title: vehicle.name,
+      body: `Đại lý hiện đang đóng cửa.\nGiờ mở cửa: ${getShopHoursText(shop)}.`,
+      actions: [{ label: "Đóng", className: "primary-choice", onClick: closeChoiceModal }]
+    });
+    return;
+  }
 
   if (isVehicleOwned()) {
     openChoiceModal({

@@ -307,8 +307,11 @@ export const baDinhMap = {
   decorations: [
     { type: "skyline", x: 120, y: 48, width: 520, height: 126 },
     { type: "skyline", x: 2260, y: 610, width: 520, height: 130 },
+    { type: "pocketParking", x: 180, y: 1240, width: 148, height: 112 },
+    { type: "pocketParking", x: 2660, y: 1490, width: 220, height: 104 },
+    { type: "alleyMouth", x: 2020, y: 1518, width: 124, text: "NGÕ VĂN MIẾU" },
     ...repeatDecor("flag", [[922, 230], [976, 230], [1030, 230], [1084, 230], [1138, 230]]),
-    ...repeatDecor("tree", [[560, 320], [560, 730], [1495, 320], [1495, 730], [1710, 340], [2140, 690], [690, 1308], [1490, 1308], [690, 1888], [1490, 1888]]),
+    ...repeatDecor("tree", [[560, 320], [560, 470], [560, 620], [560, 730], [1495, 320], [1495, 470], [1495, 620], [1495, 730], [1710, 340], [2140, 690], [690, 1308], [1490, 1308], [690, 1888], [1490, 1888]]),
     ...repeatDecor("lamp", [[610, 812], [760, 812], [910, 812], [1060, 812], [1210, 812], [1360, 812], [1580, 945], [370, 1680], [2500, 1540]]),
     ...repeatDecor("bench", [[760, 748], [920, 748], [1080, 748], [1240, 748], [1780, 670], [840, 1810], [1160, 1810]]),
     ...repeatDecor("lotus", [[1790, 560], [1850, 606], [1950, 560], [835, 1548], [940, 1562]]),
@@ -317,11 +320,17 @@ export const baDinhMap = {
     ...repeatDecor("bicycle", [[2240, 1712], [330, 1720]]),
     ...repeatDecor("trashBin", [[1420, 814], [1530, 1300], [2500, 1718]]),
     ...repeatDecor("electricBox", [[2140, 1508], [420, 1540]]),
+    ...repeatDecor("motorbike", [[2040, 1718], [2100, 1718], [2670, 1622], [2740, 1622]]),
+    ...repeatDecor("planter", [[660, 1400], [1530, 1400], [660, 1740], [1530, 1740], [1960, 1510]]),
     { type: "khueVanCac", x: 1068, y: 1450 },
     { type: "zebra", x: 348, y: 1768, width: 140, height: 138, direction: "vertical" },
     { type: "zebra", x: 2488, y: 946, width: 146, height: 140, direction: "vertical" },
     { type: "sign", x: 324, y: 1768, text: "XE" },
     { type: "sign", x: 2616, y: 910, text: "XE" },
+    { type: "trafficSign", x: 330, y: 1438, direction: "right" },
+    { type: "trafficSign", x: 2460, y: 1518, direction: "left" },
+    { type: "plasticStools", x: 500, y: 1682 },
+    { type: "streetVendor", x: 1940, y: 1660, text: "NƯỚC" },
     { type: "banner", x: 724, y: 250, color: "#d63131" }
   ]
 };

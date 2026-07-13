@@ -5,6 +5,8 @@ import { VINFAST_VEHICLE_ID, vehicleCatalog } from "./data/vehicles.js";
 import { MO_COMPANION_CONFIG } from "./data/npcSchedules.js";
 import { findLandmark, getLandmarkIdsFromStamps } from "./utils/helpers.js";
 import { normalizeGameTime } from "./utils/gameTime.js";
+import { normalizeWeatherState } from "./data/weatherProfiles.js";
+import { photoSpotsById } from "./data/photoSpots.js";
 import { isOverlayOpen, showMessage } from "./systems/modal.js";
 
 let afterSaveHandler = () => {};
@@ -29,6 +31,7 @@ export function normalizeState(saved) {
   const currentMapId = maps[saved.currentMapId] ? saved.currentMapId : base.currentMapId;
   const moCompanion = normalizeMoCompanion(saved, base, currentMapId);
   const gameTime = normalizeGameTime(saved.gameTime, base.gameTime);
+  const weather = normalizeWeatherState(saved.weather, base.weather, gameTime.totalGameMinutes);
 
   if (moCompanion.active && !gameTime.pauseReasons.includes(MO_COMPANION_CONFIG.clockPauseReason)) {
     gameTime.pauseReasons.push(MO_COMPANION_CONFIG.clockPauseReason);
@@ -49,8 +52,10 @@ export function normalizeState(saved) {
     profile: normalizeProfile(saved),
     vehicle: normalizeVehicle(saved),
     gameTime,
+    weather,
     npcSchedules: normalizeNpcSchedules(saved, base),
     moCompanion,
+    photoAlbum: normalizePhotoAlbum(saved.photoAlbum, base.photoAlbum),
     inventory: { ...base.inventory, ...(saved.inventory || {}) },
     completedQuizzes,
     completedTasks: { ...base.completedTasks, ...(saved.completedTasks || {}) },
@@ -69,6 +74,39 @@ export function normalizeState(saved) {
     freeReturnUsed: Boolean(saved.freeReturnUsed),
     victoryShown: Boolean(saved.victoryShown)
   };
+}
+
+function normalizePhotoAlbum(rawAlbum, fallback) {
+  const raw = rawAlbum && typeof rawAlbum === "object" ? rawAlbum : {};
+  const photos = {};
+  Object.entries(raw.photos || {}).forEach(([spotId, photo]) => {
+    const spot = photoSpotsById[spotId];
+    if (!spot || !photo || typeof photo !== "object") {
+      return;
+    }
+
+    const rating = Math.max(1, Math.min(3, Math.round(Number(photo.rating) || 1)));
+    photos[spotId] = {
+      photoSpotId: spotId,
+      landmarkId: spot.landmarkId,
+      title: spot.title,
+      rating,
+      gameDay: Math.max(1, Math.round(Number(photo.gameDay ?? photo.day) || 1)),
+      gameTime: typeof (photo.gameTime ?? photo.time) === "string" ? (photo.gameTime ?? photo.time) : "07:00",
+      weather: typeof photo.weather === "string" ? photo.weather : "clear",
+      mapId: spot.mapId,
+      playerGender: ["male", "female"].includes(photo.playerGender) ? photo.playerGender : null,
+      withMo: Boolean(photo.withMo),
+      capturedAt: typeof photo.capturedAt === "string" ? photo.capturedAt : null
+    };
+  });
+
+  const discoveredSpots = Array.from(new Set([
+    ...(Array.isArray(raw.discoveredSpots) ? raw.discoveredSpots : fallback.discoveredSpots),
+    ...Object.keys(photos)
+  ])).filter((spotId) => photoSpotsById[spotId]);
+
+  return { photos, discoveredSpots };
 }
 
 function normalizeMoCompanion(saved, base, currentMapId) {

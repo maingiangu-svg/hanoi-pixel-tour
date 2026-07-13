@@ -18,9 +18,11 @@ import { openParkingMenu } from "./parking.js";
 import { getScheduledNpcDialogue, getScheduledNpcsForMap, updateNpcSchedules } from "./npcSchedule.js";
 import { beginMapTransition } from "./mapTransition.js";
 import { canInviteMo, endMoHangout, getMoCompanionDialogue, getMoInvitationBlockedMessage, getMoReturnPoint, isMoCompanionActive, isNearMoReturnPoint, startMoHangout, syncMoCompanionToPlayer } from "./moCompanion.js";
+import { getActiveMapNpcs } from "./worldSchedule.js";
+import { clearNpcReactionBubble } from "./npcReactions.js";
 
 export function updateNearbyInteractable() {
-  if (isOverlayOpen()) {
+  if (isOverlayOpen() || runtime.photoMode?.active) {
     runtime.nearbyInteractable = null;
     ui.nearbyHint.classList.add("hidden");
     return;
@@ -88,7 +90,7 @@ export function getInteractables() {
         range: point ? point.radius : 76
       };
     }),
-    ...map.npcs.map((object) => ({
+    ...getActiveMapNpcs(map).filter((object) => object.interactable !== false).map((object) => ({
       type: "npc",
       object: { ...object, width: 24, height: 46 },
       source: object,
@@ -205,10 +207,11 @@ export function getInteractionPrompt(item) {
 }
 
 export function interact() {
-  if (isOverlayOpen()) {
+  if (isOverlayOpen() || runtime.photoMode?.active) {
     return;
   }
 
+  clearNpcReactionBubble();
   updateNearbyInteractable();
 
   if (!runtime.nearbyInteractable) {

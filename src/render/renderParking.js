@@ -1,6 +1,7 @@
 import { ctx, state } from "../state.js";
 import { isRectVisible } from "../camera.js";
 import { drawPixelRect } from "./renderUI.js";
+import { drawGroundShadow, drawPixelShadow } from "./renderPixelEffects.js";
 
 export function drawParkingAreas(map) {
   (map.parkingSpots || []).forEach((spot) => {
@@ -17,8 +18,7 @@ export function drawParkingAreas(map) {
 }
 
 function drawParkingSpot(spot) {
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.fillRect(spot.x + 4, spot.y + 4, spot.width, spot.height);
+  drawPixelShadow(spot.x, spot.y, spot.width, spot.height);
   drawPixelRect(spot.x, spot.y, spot.width, spot.height, "#4c535c", "#17191f", 3);
 
   ctx.strokeStyle = "#f2d86b";
@@ -40,8 +40,7 @@ function drawParkingSpot(spot) {
 }
 
 function drawParkedScooter(x, y) {
-  ctx.fillStyle = "rgba(0,0,0,0.24)";
-  ctx.fillRect(x, y + 22, 42, 6);
+  drawGroundShadow(x + 21, y + 22, 42, 6);
   ctx.fillStyle = "#151515";
   ctx.fillRect(x + 3, y + 20, 9, 9);
   ctx.fillRect(x + 32, y + 20, 9, 9);

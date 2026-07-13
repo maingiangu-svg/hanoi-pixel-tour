@@ -51,10 +51,10 @@ export const MO_COMPANION_CONFIG = {
 };
 
 export const MO_CHILDREN = [
-  { id: "childLan", x: 2474, y: 1100, color: "#f2bd45", activity: "jump" },
-  { id: "childNam", x: 2424, y: 1110, color: "#2f8ec5", activity: "run" },
-  { id: "childHoa", x: 2578, y: 1110, color: "#8de097", activity: "talk" },
-  { id: "childTung", x: 2510, y: 1120, color: "#f3988d", activity: "rope" }
+  { id: "childLan", mapId: "hoanKiem", reactionProfile: "child", x: 2474, y: 1100, color: "#f2bd45", activity: "jump" },
+  { id: "childNam", mapId: "hoanKiem", reactionProfile: "child", x: 2424, y: 1110, color: "#2f8ec5", activity: "run" },
+  { id: "childHoa", mapId: "hoanKiem", reactionProfile: "child", x: 2578, y: 1110, color: "#8de097", activity: "talk" },
+  { id: "childTung", mapId: "hoanKiem", reactionProfile: "child", x: 2510, y: 1120, color: "#f3988d", activity: "rope" }
 ];
 
 export const CHURCH_SERVICE_TIMES = {

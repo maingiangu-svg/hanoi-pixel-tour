@@ -1,6 +1,7 @@
 import { camera, isRectVisible } from "../camera.js";
 import { ctx } from "../state.js";
 import { drawPixelRect } from "./renderUI.js";
+import { drawPixelShadow } from "./renderPixelEffects.js";
 
 export function drawChurchInterior(map) {
   const church = map.church;
@@ -114,8 +115,7 @@ function drawPews(church) {
     if (!isRectVisible(pew, 50)) {
       return;
     }
-    ctx.fillStyle = "rgba(0,0,0,0.22)";
-    ctx.fillRect(pew.x + 5, pew.y + 8, pew.width, pew.height);
+    drawPixelShadow(pew.x, pew.y, pew.width, pew.height);
     drawPixelRect(pew.x, pew.y, pew.width, pew.height, "#74452d", "#2a1d18", 3);
     ctx.fillStyle = "#b98251";
     ctx.fillRect(pew.x + 10, pew.y + 6, pew.width - 20, 6);

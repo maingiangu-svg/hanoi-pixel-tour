@@ -3,8 +3,9 @@ import { isMoRidingWithPlayer } from "../systems/moCompanion.js";
 import { drawCharacterSprite, drawPreparedSprite } from "./renderCharacterSprite.js";
 import { drawMoVehiclePassenger } from "./renderCompanion.js";
 import { getVinfastBikeSprite, isSpriteReady } from "./spriteAssets.js";
+import { drawGroundShadow } from "./renderPixelEffects.js";
 
-const BIKE_WIDTH = 50;
+const BIKE_WIDTH = 55;
 
 export function drawVehicleWithRider() {
   const x = Math.round(player.x);
@@ -35,8 +36,7 @@ function drawAssetVehicle(x, y, facing) {
   const height = Math.max(1, Math.round(BIKE_WIDTH * (asset.height / asset.width)));
   const bikeX = Math.round(x + player.width / 2 - BIKE_WIDTH / 2);
   const bikeY = Math.round(y + 4);
-  ctx.fillStyle = "rgba(0,0,0,0.30)";
-  ctx.fillRect(bikeX + 3, bikeY + height - 3, BIKE_WIDTH - 6, 6);
+  drawGroundShadow(bikeX + BIKE_WIDTH / 2, bikeY + height - 4, BIKE_WIDTH - 5, 6);
 
   return drawPreparedSprite(asset, {
     x: bikeX,
@@ -59,8 +59,8 @@ function drawAssetRider(x, y, facing) {
   return drawCharacterSprite({
     gender,
     centerX,
-    topY: y + 1,
-    height: 30,
+    topY: y - 1,
+    height: 33,
     facing: riderFacing,
     pose: "rider"
   });
@@ -87,8 +87,7 @@ function drawSideVehicle(x, y, facing) {
   const baseX = x - 9;
   const baseY = y + 14;
 
-  ctx.fillStyle = "rgba(0,0,0,0.30)";
-  ctx.fillRect(baseX - 2, baseY + 20, 46, 7);
+  drawGroundShadow(baseX + 21, baseY + 21, 46, 7);
   ctx.fillStyle = "#151515";
   ctx.fillRect(baseX + 2, baseY + 19, 10, 10);
   ctx.fillRect(baseX + 31, baseY + 19, 10, 10);
@@ -119,8 +118,7 @@ function drawVerticalVehicle(x, y, facing) {
   const baseY = y + 5;
   const frontY = facing === "up" ? baseY : baseY + 25;
 
-  ctx.fillStyle = "rgba(0,0,0,0.30)";
-  ctx.fillRect(baseX - 4, baseY + 28, 34, 7);
+  drawGroundShadow(baseX + 12, baseY + 29, 34, 7);
   ctx.fillStyle = "#151515";
   ctx.fillRect(baseX - 2, baseY + 7, 8, 12);
   ctx.fillRect(baseX + 18, baseY + 7, 8, 12);

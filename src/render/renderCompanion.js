@@ -1,23 +1,32 @@
 import { ctx } from "../state.js";
+import { drawGroundShadow } from "./renderPixelEffects.js";
 
-export function drawMoSprite(npc) {
+const MO_VISUAL_SCALE = 1.06;
+
+export function drawMoSprite(npc, visual = {}) {
   const phase = performance.now() / 320;
-  const walking = npc.activity === "walking";
+  const walking = npc.activity === "walking" && !visual.pauseRoutine;
   const sitting = npc.activity === "resting" || npc.activity === "attendingMass";
   const washing = npc.activity === "washing";
-  const playing = npc.activity === "playing";
+  const playing = npc.activity === "playing" && !visual.pauseRoutine;
   const bob = playing ? Math.round(Math.sin(phase) * 2) : walking ? Math.round(Math.sin(phase * 1.9)) : 0;
   const legSwing = walking ? Math.round(Math.sin(phase * 2) * 3) : 0;
-  const x = Math.round(npc.x);
-  const y = Math.round(npc.y + bob);
+  const x = Math.round(visual.x ?? npc.x);
+  const y = Math.round((visual.y ?? npc.y) + bob);
+  const facing = visual.facing || npc.facing;
 
-  ctx.fillStyle = "rgba(0,0,0,0.27)";
-  ctx.fillRect(x - 6, y + 37, 34, 7);
+  drawGroundShadow(x + 11, y + 37, 34, 7);
+  const anchorX = x + 11;
+  const anchorY = y + 43;
+  ctx.save();
+  ctx.translate(anchorX, anchorY);
+  ctx.scale(MO_VISUAL_SCALE, MO_VISUAL_SCALE);
+  ctx.translate(-anchorX, -anchorY);
   ctx.fillStyle = "#31313a";
   ctx.fillRect(x + 3, y + 31 + legSwing, 7, sitting ? 5 : 12);
   ctx.fillRect(x + 15, y + 31 - legSwing, 7, sitting ? 5 : 12);
   drawMoBody(x, y + 14, 23, 20);
-  drawMoHead(x + 4, y + 1, npc.facing);
+  drawMoHead(x + 4, y + 1, facing);
 
   if (washing) {
     const arm = Math.round(Math.sin(phase * 1.4) * 4);
@@ -34,6 +43,7 @@ export function drawMoSprite(npc) {
     ctx.fillRect(x - 3, y + 21, 7, 9);
     ctx.fillRect(x + 22, y + 21, 7, 9);
   }
+  ctx.restore();
 }
 
 export function drawMoVehiclePassenger(x, y, facing) {

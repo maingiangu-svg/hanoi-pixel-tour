@@ -6,6 +6,7 @@ import { renderJournal } from "../systems/journal.js";
 import { getCurrentObjective, renderQuestLog } from "../systems/questSystem.js";
 import { getVehicleData, isRidingVehicle, isVehicleOwned } from "../systems/vehicle.js";
 import { getVehicleParkingLabel, isVehicleParked } from "../systems/parking.js";
+import { getCurrentAreaAmbience } from "../systems/areaAmbience.js";
 
 export function drawPixelRect(x, y, width, height, fill, stroke, strokeWidth) {
   ctx.fillStyle = fill;
@@ -61,7 +62,7 @@ export function wrapCanvasText(text, maxWidth) {
 }
 
 export function updateHud() {
-  ui.hudMapName.textContent = getCurrentMap().name;
+  ui.hudMapName.textContent = getCurrentAreaAmbience().profile.label || getCurrentMap().name;
   updateClockHud();
   ui.hudObjective.textContent = state.moCompanion?.active
     ? "Đưa Mơ về Nhà thờ Lớn để thời gian tiếp tục."

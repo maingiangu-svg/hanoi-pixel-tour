@@ -115,6 +115,13 @@ export function syncMoCompanionToPlayer({ force = false } = {}) {
     return npc;
   }
 
+  if (runtime.photoMode?.active) {
+    const position = findSafePhotoPosePosition();
+    applyFollowerPosition(npc, position.x, position.y, player.facing, false);
+    runtime.moCompanionHydrated = true;
+    return npc;
+  }
+
   if (force || mapChanged) {
     const position = findSafeCompanionPosition();
     applyFollowerPosition(npc, position.x, position.y, player.facing, false);
@@ -310,6 +317,16 @@ function findSafeCompanionPosition() {
     x: player.x,
     y: player.y
   };
+}
+
+function findSafePhotoPosePosition() {
+  const candidates = [
+    { x: player.x + 38, y: player.y + 2 },
+    { x: player.x - 38, y: player.y + 2 },
+    { x: player.x + 34, y: player.y - 32 },
+    { x: player.x - 34, y: player.y - 32 }
+  ];
+  return candidates.find((candidate) => isPlayerAreaWalkable(candidate.x, candidate.y)) || findSafeCompanionPosition();
 }
 
 function getFacing(dx, dy, fallback) {

@@ -1,3 +1,5 @@
+import { createDefaultWeatherState } from "./data/weatherProfiles.js";
+
 export const canvas = document.getElementById("gameCanvas");
 export const ctx = canvas.getContext("2d");
 
@@ -15,6 +17,7 @@ ctx.imageSmoothingEnabled = false;
 export const ui = {
   hudMapName: document.getElementById("hudMapName"),
   hudClock: document.getElementById("hudClock"),
+  hudWeather: document.getElementById("hudWeather"),
   hudObjective: document.getElementById("hudObjective"),
   vehicleStatus: document.getElementById("vehicleStatus"),
   nearbyHint: document.getElementById("nearbyHint"),
@@ -53,7 +56,17 @@ export const ui = {
   infoActions: document.getElementById("infoActions"),
   characterModal: document.getElementById("characterModal"),
   characterOptions: document.getElementById("characterOptions"),
-  characterConfirm: document.getElementById("characterConfirm")
+  characterConfirm: document.getElementById("characterConfirm"),
+  audioSettingsButton: document.getElementById("audioSettingsButton"),
+  settingsPanel: document.getElementById("settingsPanel"),
+  closeSettings: document.getElementById("closeSettings"),
+  soundEnabled: document.getElementById("soundEnabled"),
+  masterVolume: document.getElementById("masterVolume"),
+  masterVolumeValue: document.getElementById("masterVolumeValue"),
+  ambienceVolume: document.getElementById("ambienceVolume"),
+  ambienceVolumeValue: document.getElementById("ambienceVolumeValue"),
+  effectsVolume: document.getElementById("effectsVolume"),
+  effectsVolumeValue: document.getElementById("effectsVolumeValue")
 };
 
 export function createDefaultState() {
@@ -63,6 +76,7 @@ export function createDefaultState() {
     profile: { gender: null },
     vehicle: { owned: false, type: "vinfast-electric", equipped: false, status: "stored", parkedAt: null },
     gameTime: { day: 1, hour: 7, minute: 0, totalGameMinutes: 420, paused: false, pauseReasons: [] },
+    weather: createDefaultWeatherState(420),
     npcSchedules: { mo: { currentState: "washing", currentMap: "hoanKiem", x: 0, y: 0 } },
     moCompanion: {
       active: false,
@@ -74,6 +88,10 @@ export function createDefaultState() {
       ridingWithPlayer: false,
       returnDestination: "nhaThoLon",
       pausedAt: null
+    },
+    photoAlbum: {
+      photos: {},
+      discoveredSpots: []
     },
     money: 50000,
     inventory: { foods: [], souvenirs: [], stamps: [], specialItems: [] },
@@ -113,7 +131,15 @@ export const runtime = {
   moCompanionNpc: null,
   moCompanionHydrated: false,
   lastVehicleRestrictionId: null,
-  lastVehicleRestrictionAt: 0
+  lastVehicleRestrictionAt: 0,
+  playerMotionX: 0,
+  playerMotionY: 0,
+  playerMotionSpeed: 0,
+  photoMode: {
+    active: false,
+    openedAt: 0
+  },
+  photoFlashUntil: 0
 };
 
 export const player = {

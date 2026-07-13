@@ -291,6 +291,14 @@ function isObjectiveDone(objective) {
     return getCorrectQuizCount() >= objective.value;
   }
 
+  if (objective.type === "photo") {
+    return Boolean(state.photoAlbum?.photos?.[objective.value]);
+  }
+
+  if (objective.type === "photoCount") {
+    return Object.keys(state.photoAlbum?.photos || {}).length >= objective.value;
+  }
+
   return false;
 }
 
@@ -302,6 +310,11 @@ function getObjectiveProgress(objective) {
 
   if (objective.type === "quizCount") {
     const count = getCorrectQuizCount();
+    return `(${Math.min(count, objective.value)}/${objective.value})`;
+  }
+
+  if (objective.type === "photoCount") {
+    const count = Object.keys(state.photoAlbum?.photos || {}).length;
     return `(${Math.min(count, objective.value)}/${objective.value})`;
   }
 

@@ -1,13 +1,15 @@
-import { keys, player, state } from "../state.js";
+import { keys, player, runtime, state } from "../state.js";
 import { getVehicleRestrictedZoneAt, isPlayerAreaWalkable, isVehicleAreaWalkable } from "../utils/collision.js";
 import { isOverlayOpen } from "./modal.js";
 import { saveGameThrottled } from "../storage.js";
 import { getPlayerMoveSpeed, isRidingVehicle } from "./vehicle.js";
 import { showVehicleRestrictionMessage } from "./parking.js";
+import { notifyVehicleRestrictionReaction } from "./npcReactions.js";
 
 export function movePlayer() {
-  if (isOverlayOpen()) {
+  if (isOverlayOpen() || runtime.photoMode?.active) {
     player.moving = false;
+    clearPlayerMotion();
     return;
   }
 
@@ -27,6 +29,8 @@ export function movePlayer() {
   player.moving = dx !== 0 || dy !== 0;
 
   if (player.moving) {
+    const previousX = player.x;
+    const previousY = player.y;
     if (Math.abs(dx) > Math.abs(dy)) {
       player.facing = dx > 0 ? "right" : "left";
     } else {
@@ -36,8 +40,13 @@ export function movePlayer() {
     const speed = getPlayerMoveSpeed();
     tryMove(dx * speed, 0);
     tryMove(0, dy * speed);
+    runtime.playerMotionX = player.x - previousX;
+    runtime.playerMotionY = player.y - previousY;
+    runtime.playerMotionSpeed = Math.hypot(runtime.playerMotionX, runtime.playerMotionY);
     player.step += isRidingVehicle() ? 0.55 : 0.35;
     saveGameThrottled();
+  } else {
+    clearPlayerMotion();
   }
 }
 
@@ -55,6 +64,14 @@ export function tryMove(dx, dy) {
     state.player.x = Math.round(player.x);
     state.player.y = Math.round(player.y);
   } else if (isRidingVehicle()) {
-    showVehicleRestrictionMessage(getVehicleRestrictedZoneAt(nextX, nextY));
+    const restrictedZone = getVehicleRestrictedZoneAt(nextX, nextY);
+    showVehicleRestrictionMessage(restrictedZone);
+    notifyVehicleRestrictionReaction(restrictedZone);
   }
+}
+
+function clearPlayerMotion() {
+  runtime.playerMotionX = 0;
+  runtime.playerMotionY = 0;
+  runtime.playerMotionSpeed = 0;
 }

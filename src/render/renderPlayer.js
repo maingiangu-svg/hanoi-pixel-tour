@@ -3,6 +3,10 @@ import { isRidingVehicle } from "../systems/vehicle.js";
 import { drawCharacterSprite } from "./renderCharacterSprite.js";
 import { drawVehicleWithRider } from "./renderVehicle.js";
 import { getCharacterSprite, isSpriteReady } from "./spriteAssets.js";
+import { drawGroundShadow } from "./renderPixelEffects.js";
+
+const PLAYER_SPRITE_HEIGHT = 48;
+const FALLBACK_VISUAL_SCALE = 1.08;
 
 export function drawPlayer() {
   if (isRidingVehicle()) {
@@ -27,13 +31,12 @@ function drawAssetPlayer(gender, x, y, bob) {
     return false;
   }
 
-  ctx.fillStyle = "rgba(0,0,0,0.32)";
-  ctx.fillRect(x - 3, y + 33, player.width + 7, 5);
+  drawGroundShadow(x + player.width / 2, y + 32, player.width + 8, 6);
   return drawCharacterSprite({
     gender,
     centerX: x + player.width / 2,
-    topY: y - 4 + bob,
-    height: 42,
+    topY: y - 10 + bob,
+    height: PLAYER_SPRITE_HEIGHT,
     facing: player.facing
   });
 }
@@ -41,8 +44,13 @@ function drawAssetPlayer(gender, x, y, bob) {
 function drawFallbackPlayer(gender, x, y) {
   const legOffset = player.moving ? Math.floor(Math.sin(player.step) * 3) : 0;
 
-  ctx.fillStyle = "rgba(0,0,0,0.32)";
-  ctx.fillRect(x - 4, y + 29, player.width + 9, 7);
+  drawGroundShadow(x + player.width / 2, y + 30, player.width + 9, 7);
+  const anchorX = x + player.width / 2;
+  const anchorY = y + 35;
+  ctx.save();
+  ctx.translate(anchorX, anchorY);
+  ctx.scale(FALLBACK_VISUAL_SCALE, FALLBACK_VISUAL_SCALE);
+  ctx.translate(-anchorX, -anchorY);
 
   ctx.fillStyle = "#2f3542";
   ctx.fillRect(x + 4, y + 23, 6, 10 + legOffset);
@@ -95,4 +103,5 @@ function drawFallbackPlayer(gender, x, y) {
       ctx.fillRect(x + 16, y - 1, 8, 4);
     }
   }
+  ctx.restore();
 }

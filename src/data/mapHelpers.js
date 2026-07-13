@@ -10,7 +10,12 @@ export function rowHouses({ x, y, count, width = 70, height = 96, gap = 10, colo
       color: color.body,
       roof: color.roof,
       door: color.door,
-      sign: signs[index % signs.length]
+      sign: signs.length ? signs[index % signs.length] : "PHỐ",
+      facadeVariant: index % 5,
+      balconySide: index % 2 === 0 ? "left" : "right",
+      hasAwning: index % 3 !== 1,
+      hasAirConditioner: index % 4 !== 2,
+      hasWaterTank: index % 3 === 0
     };
   });
 }
@@ -23,7 +28,8 @@ export function rowApartments({ x, y, count, width = 118, height = 150, gap = 16
     width,
     height: height + (index % 2) * 20,
     color: index % 2 === 0 ? "#c8b58b" : "#aeb3aa",
-    roof: index % 2 === 0 ? "#8c4a35" : "#5e646a"
+    roof: index % 2 === 0 ? "#8c4a35" : "#5e646a",
+    facadeVariant: index % 3
   }));
 }
 

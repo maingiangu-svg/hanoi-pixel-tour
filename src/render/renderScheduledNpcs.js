@@ -5,6 +5,10 @@ import { getPlayerCenter } from "../utils/helpers.js";
 import { getChurchService, getMoChildren, getScheduledNpcsForMap } from "../systems/npcSchedule.js";
 import { drawPixelRect, drawTextBadge } from "./renderUI.js";
 import { drawMoSprite } from "./renderCompanion.js";
+import { drawGroundShadow } from "./renderPixelEffects.js";
+import { drawNpcRainGear } from "./renderWeather.js";
+import { getNpcReactionVisual } from "../systems/npcReactions.js";
+import { drawNpcReactionOverlay } from "./renderNpcReactions.js";
 
 export function drawScheduledNpcs(map) {
   if (map.id === "hoanKiem") {
@@ -17,16 +21,29 @@ export function drawScheduledNpcs(map) {
   }
 
   getScheduledNpcsForMap(map).forEach((npc) => {
-    if (!npc.visible || !isRectVisible({ x: npc.x - 16, y: npc.y - 20, width: 56, height: 76 }, 80)) {
+    const reaction = getNpcReactionVisual(npc);
+    const visualX = npc.x + reaction.offsetX;
+    const visualY = npc.y + reaction.offsetY;
+    if (!npc.visible || !isRectVisible({ x: visualX - 16, y: visualY - 20, width: 56, height: 76 }, 80)) {
       return;
     }
 
     if (npc.id === "chaXu") {
       drawPriest(npc);
     } else {
-      drawMoSprite(npc);
+      drawMoSprite(npc, {
+        x: visualX,
+        y: visualY,
+        facing: reaction.facing || npc.facing,
+        pauseRoutine: reaction.pauseRoutine
+      });
     }
 
+    if (map.kind !== "churchInterior") {
+      drawNpcRainGear(npc, visualX, visualY, performance.now() / 420);
+    }
+
+    drawNpcReactionOverlay(npc, visualX, visualY);
     drawNpcNameWhenNearby(npc);
   });
 }
@@ -69,22 +86,23 @@ function drawNeighborhoodChildren() {
   const children = getMoChildren();
   const phase = performance.now() / 430;
   children.forEach((child, index) => {
-    const shiftX = child.activity === "run" ? Math.round(Math.sin(phase + index) * 11) : 0;
-    const shiftY = child.activity === "jump" ? Math.round(Math.sin(phase * 2 + index) * 3) : 0;
-    const x = child.x + shiftX;
-    const y = child.y + shiftY;
+    const reaction = getNpcReactionVisual(child);
+    const shiftX = !reaction.pauseRoutine && child.activity === "run" ? Math.round(Math.sin(phase + index) * 11) : 0;
+    const shiftY = !reaction.pauseRoutine && child.activity === "jump" ? Math.round(Math.sin(phase * 2 + index) * 3) : 0;
+    const x = child.x + shiftX + reaction.offsetX;
+    const y = child.y + shiftY + reaction.offsetY;
     if (!isRectVisible({ x: x - 8, y: y - 8, width: 32, height: 44 }, 70)) {
       return;
     }
-    drawChild(x, y, child.color, child.activity, phase + index);
+    drawChild(x, y, child.color, reaction.pauseRoutine ? "idle" : child.activity, phase + index);
+    drawNpcReactionOverlay(child, x, y);
   });
 }
 
 function drawChild(x, y, color, activity, phase) {
   const armLift = activity === "jump" || activity === "rope";
   const swing = activity === "run" ? Math.round(Math.sin(phase * 2) * 2) : 0;
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.fillRect(x - 3, y + 27, 24, 5);
+  drawGroundShadow(x + 9, y + 27, 24, 5);
   ctx.fillStyle = "#ffd0a6";
   ctx.fillRect(x + 3, y + 2, 13, 12);
   ctx.fillStyle = "#2b2b32";
@@ -129,8 +147,7 @@ function drawCongregant(person, posture, index) {
   const bob = standing ? Math.round(Math.sin(phase) * 1) : 0;
   const x = person.x;
   const y = person.y + bob;
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.fillRect(x - 3, y + (standing ? 31 : 25), 24, 5);
+  drawGroundShadow(x + 9, y + (standing ? 31 : 25), 24, 5);
   ctx.fillStyle = "#f0c39b";
   ctx.fillRect(x + 3, y + 1, 14, 12);
   ctx.fillStyle = "#2b2b32";
@@ -147,8 +164,7 @@ function drawPriest(npc) {
   const arm = Math.round(Math.sin(phase) * 2);
   const x = npc.x;
   const y = npc.y;
-  ctx.fillStyle = "rgba(0,0,0,0.24)";
-  ctx.fillRect(x - 6, y + 38, 34, 6);
+  drawGroundShadow(x + 11, y + 38, 34, 6);
   ctx.fillStyle = "#f0c39b";
   ctx.fillRect(x + 4, y + 1, 16, 14);
   ctx.fillStyle = "#4a4039";
