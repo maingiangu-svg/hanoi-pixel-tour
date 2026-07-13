@@ -38,20 +38,21 @@ export function drawMoSprite(npc) {
 
 export function drawMoVehiclePassenger(x, y, facing) {
   if (facing === "left" || facing === "right") {
-    const passengerX = facing === "right" ? x - 5 : x + 8;
-    drawMoBody(passengerX, y + 15, 16, 14);
-    drawMoHead(passengerX + 1, y + 3, facing, { compact: true });
+    const passengerX = facing === "right" ? x - 10 : x + 12;
+    drawMoBody(passengerX, y + 16, 15, 13);
+    drawMoHead(passengerX + 1, y + 4, facing, { compact: true });
     ctx.fillStyle = "#f3d6a4";
-    ctx.fillRect(facing === "right" ? passengerX + 15 : passengerX - 4, y + 20, 7, 4);
+    ctx.fillRect(facing === "right" ? passengerX + 14 : passengerX - 4, y + 21, 7, 4);
     return;
   }
 
-  const passengerY = facing === "up" ? y + 14 : y - 3;
-  drawMoBody(x + 4, passengerY + 13, 17, 14);
-  drawMoHead(x + 5, passengerY + 1, facing, { compact: true });
+  const passengerX = x + 17;
+  const passengerY = y + 4;
+  drawMoBody(passengerX, passengerY + 13, 15, 13);
+  drawMoHead(passengerX + 1, passengerY + 1, facing, { compact: true });
   ctx.fillStyle = "#f3d6a4";
-  ctx.fillRect(x + 1, passengerY + 19, 5, 4);
-  ctx.fillRect(x + 19, passengerY + 19, 5, 4);
+  ctx.fillRect(passengerX - 3, passengerY + 19, 5, 4);
+  ctx.fillRect(passengerX + 16, passengerY + 19, 5, 4);
 }
 
 function drawMoBody(x, y, width, height) {

@@ -67,16 +67,17 @@ h1 {
 }
 
 .guide {
-  max-width: 460px;
+  max-width: 270px;
   margin: 0;
-  padding: 4px 7px;
-  border: 3px solid var(--ink);
+  padding: 3px 5px;
+  border: 2px solid var(--ink);
   background: #fff0a8;
   color: #1d1d22;
-  box-shadow: 5px 5px 0 #000;
-  font-size: 10px;
+  box-shadow: 3px 3px 0 #000;
+  font-size: 8px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 @media (min-width: 781px) {
@@ -107,12 +108,12 @@ canvas {
 .top-bar {
   position: absolute;
   z-index: 4;
-  top: 6px;
-  left: 6px;
-  right: 6px;
+  top: 4px;
+  left: 4px;
+  right: 4px;
   display: grid;
-  grid-template-columns: 1.12fr 0.62fr 0.82fr 0.42fr 0.56fr 1.46fr;
-  gap: 4px;
+  grid-template-columns: minmax(0, 0.9fr) max-content minmax(0, 1.6fr);
+  gap: 3px;
   pointer-events: none;
 }
 
@@ -126,36 +127,39 @@ canvas {
 }
 
 .hud-pill {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   min-width: 0;
-  min-height: 34px;
-  padding: 4px 6px;
-  background:
-    linear-gradient(180deg, rgba(255, 248, 214, 0.97), rgba(245, 214, 132, 0.95));
+  min-height: 24px;
+  padding: 3px 5px;
+  border-width: 3px;
+  background: #f3c957;
   color: #151515;
-  outline: 1px solid rgba(255, 255, 255, 0.28);
-  outline-offset: -5px;
+  box-shadow: 3px 3px 0 #000;
 }
 
 .hud-label {
-  display: block;
-  margin-bottom: 1px;
-  color: #55515a;
-  font-size: 8px;
+  flex: 0 0 auto;
+  color: #5a4720;
+  font-size: 7px;
   font-weight: 700;
 }
 
 .hud-pill strong {
-  display: block;
+  min-width: 0;
   overflow: hidden;
   color: #151515;
-  font-size: 11px;
-  line-height: 1.05;
+  font-size: 10px;
+  line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .hud-objective strong {
-  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nearby-hint {
@@ -990,25 +994,25 @@ canvas {
 
   .guide {
     max-width: none;
-    font-size: 10px;
+    font-size: 8px;
   }
 
   .top-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: minmax(0, 0.82fr) max-content minmax(0, 1.28fr);
+    gap: 2px;
   }
 
   .hud-pill {
-    min-height: 32px;
-    padding: 4px 6px;
+    min-height: 22px;
+    padding: 3px 4px;
   }
 
   .hud-pill strong {
-    font-size: 10px;
+    font-size: 8px;
   }
 
-  .hud-objective {
-    grid-column: 1 / -1;
+  .hud-label {
+    font-size: 6px;
   }
 
   .dialogue-box {

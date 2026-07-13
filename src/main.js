@@ -11,6 +11,7 @@ import { addUnique, placePlayerAtSafeStart } from "./utils/helpers.js";
 import { isPlayerAreaWalkable } from "./utils/collision.js";
 import { drawGame } from "./render/renderGame.js";
 import { updateHud } from "./render/renderUI.js";
+import { preloadSpriteAssets } from "./render/spriteAssets.js";
 import { initCanvasLayout } from "./systems/canvasLayout.js";
 import { initGameClock, resetGameClockFrame, updateGameClock } from "./systems/gameClock.js";
 import { updateNpcSchedules } from "./systems/npcSchedule.js";
@@ -26,6 +27,7 @@ function gameLoop(timestamp) {
 }
 
 function bootGame() {
+  preloadSpriteAssets();
   setAfterSaveHandler(updateHud);
   setInfoCloseHandler(handlePendingVictory);
   initGameClock();

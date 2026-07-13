@@ -15,9 +15,6 @@ ctx.imageSmoothingEnabled = false;
 export const ui = {
   hudMapName: document.getElementById("hudMapName"),
   hudClock: document.getElementById("hudClock"),
-  hudMoney: document.getElementById("hudMoney"),
-  hudStamps: document.getElementById("hudStamps"),
-  hudFoods: document.getElementById("hudFoods"),
   hudObjective: document.getElementById("hudObjective"),
   vehicleStatus: document.getElementById("vehicleStatus"),
   nearbyHint: document.getElementById("nearbyHint"),

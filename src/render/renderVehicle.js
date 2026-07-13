@@ -1,23 +1,85 @@
 import { ctx, player, state } from "../state.js";
 import { isMoRidingWithPlayer } from "../systems/moCompanion.js";
+import { drawCharacterSprite, drawPreparedSprite } from "./renderCharacterSprite.js";
 import { drawMoVehiclePassenger } from "./renderCompanion.js";
+import { getVinfastBikeSprite, isSpriteReady } from "./spriteAssets.js";
+
+const BIKE_WIDTH = 50;
 
 export function drawVehicleWithRider() {
   const x = Math.round(player.x);
   const y = Math.round(player.y);
   const facing = player.facing;
   const bob = player.moving ? Math.round(Math.sin(player.step) * 1) : 0;
+  const usingBikeSprite = drawAssetVehicle(x, y + bob, facing);
 
-  if (facing === "left" || facing === "right") {
-    drawSideVehicle(x, y + bob, facing);
-    if (isMoRidingWithPlayer()) drawMoVehiclePassenger(x, y + bob, facing);
-    drawSideRider(x, y + bob, facing);
-    return;
+  if (!usingBikeSprite) {
+    drawFallbackVehicle(x, y + bob, facing);
   }
 
-  drawVerticalVehicle(x, y + bob, facing);
-  if (isMoRidingWithPlayer()) drawMoVehiclePassenger(x, y + bob, facing);
-  drawVerticalRider(x, y + bob, facing);
+  if (isMoRidingWithPlayer()) {
+    drawMoVehiclePassenger(x, y + bob, facing);
+  }
+
+  if (!usingBikeSprite || !drawAssetRider(x, y + bob, facing)) {
+    drawFallbackRider(x, y + bob, facing);
+  }
+}
+
+function drawAssetVehicle(x, y, facing) {
+  const asset = getVinfastBikeSprite();
+  if (!isSpriteReady(asset)) {
+    return false;
+  }
+
+  const height = Math.max(1, Math.round(BIKE_WIDTH * (asset.height / asset.width)));
+  const bikeX = Math.round(x + player.width / 2 - BIKE_WIDTH / 2);
+  const bikeY = Math.round(y + 4);
+  ctx.fillStyle = "rgba(0,0,0,0.30)";
+  ctx.fillRect(bikeX + 3, bikeY + height - 3, BIKE_WIDTH - 6, 6);
+
+  return drawPreparedSprite(asset, {
+    x: bikeX,
+    y: bikeY,
+    width: BIKE_WIDTH,
+    height,
+    flipHorizontal: facing === "right"
+  });
+}
+
+function drawAssetRider(x, y, facing) {
+  const gender = getGender();
+  const centerX = facing === "right"
+    ? x + 20
+    : facing === "left"
+      ? x + 4
+      : x + 6;
+  const riderFacing = facing === "left" || facing === "right" ? facing : "down";
+
+  return drawCharacterSprite({
+    gender,
+    centerX,
+    topY: y + 1,
+    height: 30,
+    facing: riderFacing,
+    pose: "rider"
+  });
+}
+
+function drawFallbackVehicle(x, y, facing) {
+  if (facing === "left" || facing === "right") {
+    drawSideVehicle(x, y, facing);
+  } else {
+    drawVerticalVehicle(x, y, facing);
+  }
+}
+
+function drawFallbackRider(x, y, facing) {
+  if (facing === "left" || facing === "right") {
+    drawSideRider(x, y, facing);
+  } else {
+    drawVerticalRider(x, y, facing);
+  }
 }
 
 function drawSideVehicle(x, y, facing) {

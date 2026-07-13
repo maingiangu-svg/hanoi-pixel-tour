@@ -43,9 +43,9 @@ export function renderInventory() {
 
   const grid = document.createElement("div");
   grid.className = "panel-grid";
-  grid.appendChild(createInventorySection("Món đã ăn", state.inventory.foods));
+  grid.appendChild(createInventorySection(`Món đã ăn (${state.inventory.foods.length})`, state.inventory.foods));
   grid.appendChild(createInventorySection("Quà lưu niệm", state.inventory.souvenirs));
-  grid.appendChild(createInventorySection("Tem check-in", state.inventory.stamps));
+  grid.appendChild(createInventorySection(`Tem check-in (${state.inventory.stamps.length})`, state.inventory.stamps));
   grid.appendChild(createInventorySection("Vật phẩm đặc biệt", state.inventory.specialItems));
   ui.inventoryContent.appendChild(grid);
 }

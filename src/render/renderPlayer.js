@@ -1,6 +1,8 @@
 import { ctx, player, state } from "../state.js";
 import { isRidingVehicle } from "../systems/vehicle.js";
+import { drawCharacterSprite } from "./renderCharacterSprite.js";
 import { drawVehicleWithRider } from "./renderVehicle.js";
+import { getCharacterSprite, isSpriteReady } from "./spriteAssets.js";
 
 export function drawPlayer() {
   if (isRidingVehicle()) {
@@ -9,9 +11,35 @@ export function drawPlayer() {
   }
 
   const gender = state.profile.gender === "female" ? "female" : "male";
-  const legOffset = player.moving ? Math.floor(Math.sin(player.step) * 3) : 0;
   const x = Math.round(player.x);
   const y = Math.round(player.y);
+  const bob = player.moving ? Math.round(Math.sin(player.step) * 1) : 0;
+
+  if (drawAssetPlayer(gender, x, y, bob)) {
+    return;
+  }
+
+  drawFallbackPlayer(gender, x, y);
+}
+
+function drawAssetPlayer(gender, x, y, bob) {
+  if (!isSpriteReady(getCharacterSprite(gender))) {
+    return false;
+  }
+
+  ctx.fillStyle = "rgba(0,0,0,0.32)";
+  ctx.fillRect(x - 3, y + 33, player.width + 7, 5);
+  return drawCharacterSprite({
+    gender,
+    centerX: x + player.width / 2,
+    topY: y - 4 + bob,
+    height: 42,
+    facing: player.facing
+  });
+}
+
+function drawFallbackPlayer(gender, x, y) {
+  const legOffset = player.moving ? Math.floor(Math.sin(player.step) * 3) : 0;
 
   ctx.fillStyle = "rgba(0,0,0,0.32)";
   ctx.fillRect(x - 4, y + 29, player.width + 9, 7);

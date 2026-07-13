@@ -16,7 +16,6 @@ const MAX_CLOCK_DELTA_SECONDS = 2;
  * Test xong hãy đổi lại thành 1.
  */
 const GAME_TIME_SPEED = 1;
-
 let initialized = false;
 
 export function initGameClock() {

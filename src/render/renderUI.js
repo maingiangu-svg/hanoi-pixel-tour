@@ -1,6 +1,5 @@
 import { ctx, state, ui } from "../state.js";
 import { getCurrentMap } from "../utils/helpers.js";
-import { formatMoney } from "../utils/format.js";
 import { formatGameTimeHud } from "../utils/gameTime.js";
 import { renderInventory } from "../systems/inventory.js";
 import { renderJournal } from "../systems/journal.js";
@@ -64,9 +63,6 @@ export function wrapCanvasText(text, maxWidth) {
 export function updateHud() {
   ui.hudMapName.textContent = getCurrentMap().name;
   updateClockHud();
-  ui.hudMoney.textContent = formatMoney(state.money);
-  ui.hudStamps.textContent = `${state.inventory.stamps.length}`;
-  ui.hudFoods.textContent = `${state.eatenFoods.length}`;
   ui.hudObjective.textContent = state.moCompanion?.active
     ? "Đưa Mơ về Nhà thờ Lớn để thời gian tiếp tục."
     : getCurrentObjective();
