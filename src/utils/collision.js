@@ -119,7 +119,8 @@ export function getSolidObjects() {
     ...(map.vehicleShops || []),
     ...(map.collisionBlocks || []),
     ...map.landmarks.filter((landmark) => landmark.solid !== false),
-    ...(runtime.scheduledCollisionBlocks || []).filter((block) => !block.mapId || block.mapId === map.id)
+    ...(runtime.scheduledCollisionBlocks || []).filter((block) => !block.mapId || block.mapId === map.id),
+    ...(runtime.eventCollisionBlocks || []).filter((block) => !block.mapId || block.mapId === map.id)
   ];
 }
 

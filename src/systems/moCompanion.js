@@ -115,6 +115,15 @@ export function syncMoCompanionToPlayer({ force = false } = {}) {
     return npc;
   }
 
+  const environmentPose = runtime.environmentInteraction?.active
+    ? runtime.environmentInteraction.companionPose
+    : null;
+  if (environmentPose) {
+    applyEnvironmentPose(npc, environmentPose);
+    runtime.moCompanionHydrated = true;
+    return npc;
+  }
+
   if (runtime.photoMode?.active) {
     const position = findSafePhotoPosePosition();
     applyFollowerPosition(npc, position.x, position.y, player.facing, false);
@@ -273,6 +282,20 @@ function applyFollowerPosition(npc, x, y, facing, walking) {
   writeCompanionState(npc, false);
 }
 
+function applyEnvironmentPose(npc, pose) {
+  npc.x = pose.x;
+  npc.y = pose.y;
+  npc.mapId = state.currentMapId;
+  npc.facing = pose.facing || player.facing;
+  npc.state = "hangingOut";
+  npc.activity = pose.activity || "hangingOut";
+  npc.visible = true;
+  npc.interactable = false;
+  npc.companion = true;
+  npc.ridingWithPlayer = false;
+  writeCompanionState(npc, false);
+}
+
 function writeCompanionState(npc, ridingWithPlayer) {
   state.moCompanion.currentMap = state.currentMapId;
   state.moCompanion.x = Math.round(npc.x);
@@ -340,5 +363,5 @@ function getFacing(dx, dy, fallback) {
 }
 
 function isPlayerRidingVehicle() {
-  return Boolean(state.vehicle?.owned && state.vehicle.equipped && state.vehicle.status !== "parked");
+  return Boolean(state.vehicle?.owned && state.vehicle.equipped && state.vehicle.status === "riding");
 }

@@ -22,6 +22,7 @@ import {
   hasActiveReactionBubble
 } from "../systems/npcReactions.js";
 import { drawNpcReactionOverlay } from "./renderNpcReactions.js";
+import { drawFemaleBikeDealershipPreview } from "./renderVehicle.js";
 
 export function drawBackground(map) {
   const width = map.width || 1024;
@@ -531,7 +532,13 @@ export function drawVehicleShops(map) {
     ctx.fillStyle = "#3c464d";
     ctx.fillRect(shop.x + 16, shop.y + shop.height - 16, shop.width - 32, 10);
     if (open) {
-      drawTinyVinFastScooter(shop.x + shop.width - 58, shop.y + shop.height - 44);
+      const previewed = drawFemaleBikeDealershipPreview(
+        shop.x + shop.width - 38,
+        shop.y + shop.height - 10
+      );
+      if (!previewed) {
+        drawTinyVinFastScooter(shop.x + shop.width - 58, shop.y + shop.height - 44);
+      }
     } else {
       drawClosedShopShutter(shop);
     }

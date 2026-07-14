@@ -20,8 +20,37 @@ import { beginMapTransition } from "./mapTransition.js";
 import { canInviteMo, endMoHangout, getMoCompanionDialogue, getMoInvitationBlockedMessage, getMoReturnPoint, isMoCompanionActive, isNearMoReturnPoint, startMoHangout, syncMoCompanionToPlayer } from "./moCompanion.js";
 import { getActiveMapNpcs } from "./worldSchedule.js";
 import { clearNpcReactionBubble } from "./npcReactions.js";
+import {
+  getBranchingQuestInteractables,
+  handleBranchingQuestActor,
+  handleBranchingLinkedNpc,
+  handleMoQuestInteraction,
+  notifyBranchingQuestMapTransition,
+  notifyMoReturned,
+  openMoDestinationQuest
+} from "./branchingQuest.js";
+import { canChangeMapWithQuestFollowers } from "./questFollower.js";
+import { getRandomEventInteractables } from "./randomEvents.js";
+import { handleRandomEventInteraction } from "./randomEventInteractions.js";
+import {
+  endEnvironmentInteraction,
+  getEnvironmentInteractables,
+  handleEnvironmentInteractable,
+  isEnvironmentInteractionActive,
+  showActiveEnvironmentHint
+} from "./environmentInteraction.js";
+import { completeTrackedObjective } from "./navigation.js";
 
 export function updateNearbyInteractable() {
+  if (isEnvironmentInteractionActive()) {
+    if (runtime.photoMode?.active) {
+      ui.nearbyHint.classList.add("hidden");
+    } else {
+      showActiveEnvironmentHint();
+    }
+    return;
+  }
+  ui.nearbyHint.classList.remove("is-environment-status");
   if (isOverlayOpen() || runtime.photoMode?.active) {
     runtime.nearbyInteractable = null;
     ui.nearbyHint.classList.add("hidden");
@@ -90,6 +119,9 @@ export function getInteractables() {
         range: point ? point.radius : 76
       };
     }),
+    ...getBranchingQuestInteractables(map.id),
+    ...getRandomEventInteractables(map.id),
+    ...getEnvironmentInteractables(map.id),
     ...getActiveMapNpcs(map).filter((object) => object.interactable !== false).map((object) => ({
       type: "npc",
       object: { ...object, width: 24, height: 46 },
@@ -169,6 +201,9 @@ export function getInteractionPrompt(item) {
     if (item.type === "parking") {
       return "E · Gửi xe";
     }
+    if (item.type === "environment" && item.source?.type === "vehicleWalkZone") {
+      return "E · Dắt hoặc gửi xe";
+    }
     return "[V] Xuống xe để tương tác";
   }
 
@@ -187,6 +222,14 @@ export function getInteractionPrompt(item) {
     return "E · Đưa Mơ về";
   }
 
+  if (item.type === "branchingQuest") {
+    return `E · ${item.object.kind === "item" || item.object.kind === "clue" ? "Kiểm tra" : `Nói chuyện với ${item.object.name}`}`;
+  }
+
+  if (item.type === "randomEvent") {
+    return item.source.definition.interaction.prompt || `E · ${item.object.name}`;
+  }
+
   if (item.type === "shop") {
     return `E · Ghé ${item.object.name}`;
   }
@@ -201,6 +244,10 @@ export function getInteractionPrompt(item) {
 
   if (item.type === "parking") {
     return "E · Bãi gửi xe";
+  }
+
+  if (item.type === "environment") {
+    return `E · ${item.source.prompt}`;
   }
 
   return `${item.source ? item.source.name : item.object.name}\n[E] Khám phá`;
@@ -219,7 +266,10 @@ export function interact() {
     return;
   }
 
-  if (isRidingVehicle() && !["exit", "parking"].includes(runtime.nearbyInteractable.type)) {
+  const ridingEnvironmentType = runtime.nearbyInteractable.type === "environment"
+    ? runtime.nearbyInteractable.source?.type
+    : null;
+  if (isRidingVehicle() && !["exit", "parking"].includes(runtime.nearbyInteractable.type) && ridingEnvironmentType !== "vehicleWalkZone") {
     showMessage("Nhấn V để xuống xe trước khi tương tác.");
     return;
   }
@@ -240,6 +290,12 @@ export function interact() {
     openParkingMenu(runtime.nearbyInteractable.source);
   }
 
+  if (runtime.nearbyInteractable.type === "environment") {
+    handleEnvironmentInteractable(runtime.nearbyInteractable.source);
+    completeTrackedObjective("environmentInteraction", runtime.nearbyInteractable.source.id);
+    return;
+  }
+
   if (runtime.nearbyInteractable.type === "moReturn") {
     openMoReturnConfirmation();
   }
@@ -252,12 +308,41 @@ export function interact() {
     handleScheduledNpc(runtime.nearbyInteractable.source);
   }
 
+  if (runtime.nearbyInteractable.type === "branchingQuest") {
+    handleBranchingQuestActor(runtime.nearbyInteractable.source);
+  }
+
+  if (runtime.nearbyInteractable.type === "randomEvent") {
+    handleRandomEventInteraction(runtime.nearbyInteractable.source);
+  }
+
   if (runtime.nearbyInteractable.type === "landmark") {
     handleLandmark(runtime.nearbyInteractable.source || runtime.nearbyInteractable.object);
+  }
+
+  const navigationTypes = {
+    landmark: "landmark",
+    shop: "shop",
+    vehicleShop: "vehicleShop",
+    parking: "parking",
+    npc: "npc",
+    scheduledNpc: "npc",
+    randomEvent: "event"
+  };
+  const navigationType = navigationTypes[runtime.nearbyInteractable.type];
+  if (navigationType) {
+    completeTrackedObjective(navigationType, runtime.nearbyInteractable.source?.id || runtime.nearbyInteractable.object?.id);
   }
 }
 
 export function travelToMap(exit) {
+  const travelCheck = canChangeMapWithQuestFollowers(exit.targetMap);
+  if (!travelCheck.allowed) {
+    showMessage(travelCheck.message);
+    return;
+  }
+  const travelMethod = exit.kind === "bus" ? "bus" : (isRidingVehicle() ? "vinfast" : "walk");
+  endEnvironmentInteraction({ restore: true, silent: true });
   dismountVehicle({ silent: true });
 
   if (exit.kind === "bus") {
@@ -292,6 +377,7 @@ export function travelToMap(exit) {
   snapCameraToPlayer();
   beginMapTransition();
   showMessage(exit.message);
+  notifyBranchingQuestMapTransition(exit.targetMap, travelMethod);
   saveGame();
   checkVictory();
 }
@@ -348,6 +434,9 @@ export function handleLandmark(landmark) {
 }
 
 export function handleNpc(npc) {
+  if (handleBranchingLinkedNpc(npc)) {
+    return;
+  }
   const task = npc.task;
 
   if (!task) {
@@ -501,6 +590,9 @@ export function handleScheduledNpc(npc) {
 }
 
 function handleMoInteraction(npc) {
+  if (handleMoQuestInteraction(npc)) {
+    return;
+  }
   if (isMoCompanionActive()) {
     openMoCompanionMenu();
     return;
@@ -581,6 +673,13 @@ function openMoCompanionMenu() {
         }
       },
       {
+        label: "Mơ muốn đi đâu?",
+        onClick: () => {
+          closeChoiceModal();
+          openMoDestinationQuest();
+        }
+      },
+      {
         label: "Đưa Mơ về Nhà thờ",
         onClick: () => {
           closeChoiceModal();
@@ -613,6 +712,7 @@ function openMoReturnConfirmation() {
         onClick: () => {
           closeChoiceModal();
           endMoHangout();
+          notifyMoReturned();
           updateNpcSchedules();
           saveGame();
           showMessage("Bạn đã đưa Mơ về Nhà thờ Lớn. Thời gian tiếp tục.");

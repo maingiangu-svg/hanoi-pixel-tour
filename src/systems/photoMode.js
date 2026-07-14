@@ -11,6 +11,7 @@ import { isMoCompanionActive, syncMoCompanionToPlayer } from "./moCompanion.js";
 import { checkSideQuests } from "./questSystem.js";
 import { isRidingVehicle } from "./vehicle.js";
 import { getWeatherType } from "./weather.js";
+import { getPhotoEventForSpot, markPhotoEventCaptured } from "./randomEvents.js";
 
 const PHOTO_CLOCK_PAUSE_REASON = "photo-mode";
 const DISCOVERY_CHECK_INTERVAL = 180;
@@ -156,7 +157,7 @@ export function captureCurrentPhoto() {
     return true;
   }
 
-  if (previous && photo.rating === previous.rating) {
+  if (previous && photo.rating === previous.rating && (!photo.eventId || previous.eventId === photo.eventId)) {
     showMessage(`Ảnh cũ đã đạt mức ${getPhotoRatingLabel(previous.rating)} nên được giữ lại.`);
     return true;
   }
@@ -210,12 +211,15 @@ function commitPhoto(spot, photo, replaced) {
   ensurePhotoAlbum();
   const firstCapture = !hasCapturedPhotoSpot(spot.id);
   state.photoAlbum.photos[spot.id] = photo;
+  if (photo.eventId) markPhotoEventCaptured(photo.eventId);
   if (!state.photoAlbum.discoveredSpots.includes(spot.id)) {
     state.photoAlbum.discoveredSpots.push(spot.id);
   }
   saveGame();
   checkSideQuests();
-  const result = replaced ? "Ảnh đẹp hơn đã thay ảnh cũ." : "Đã lưu ảnh vào Album Hà Nội.";
+  const result = replaced
+    ? (photo.eventId ? "Ảnh sự kiện đã thay ảnh cũ." : "Ảnh đẹp hơn đã thay ảnh cũ.")
+    : "Đã lưu ảnh vào Album Hà Nội.";
   showMessage(`${result} Mức đánh giá: ${photo.ratingLabel}.`);
   return firstCapture;
 }
@@ -250,6 +254,7 @@ function createPhotoMetadata(spot, rating) {
   const minuteOfDay = ((totalMinutes % 1440) + 1440) % 1440;
   const hours = Math.floor(minuteOfDay / 60);
   const minutes = minuteOfDay % 60;
+  const eventMetadata = getPhotoEventForSpot(spot.id, spot.mapId);
   return {
     photoSpotId: spot.id,
     landmarkId: spot.landmarkId,
@@ -262,6 +267,8 @@ function createPhotoMetadata(spot, rating) {
     mapId: spot.mapId,
     playerGender: state.profile?.gender || null,
     withMo: isMoCompanionActive(),
+    eventId: eventMetadata?.eventId || null,
+    eventTags: eventMetadata?.eventTags || [],
     capturedAt: new Date().toISOString()
   };
 }

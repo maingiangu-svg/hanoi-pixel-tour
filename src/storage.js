@@ -7,6 +7,8 @@ import { findLandmark, getLandmarkIdsFromStamps } from "./utils/helpers.js";
 import { normalizeGameTime } from "./utils/gameTime.js";
 import { normalizeWeatherState } from "./data/weatherProfiles.js";
 import { photoSpotsById } from "./data/photoSpots.js";
+import { BRANCHING_OUTCOMES, branchingQuests } from "./data/branchingQuests.js";
+import { RANDOM_EVENT_IDS, randomEventsById } from "./data/randomEvents.js";
 import { isOverlayOpen, showMessage } from "./systems/modal.js";
 
 let afterSaveHandler = () => {};
@@ -56,6 +58,9 @@ export function normalizeState(saved) {
     npcSchedules: normalizeNpcSchedules(saved, base),
     moCompanion,
     photoAlbum: normalizePhotoAlbum(saved.photoAlbum, base.photoAlbum),
+    branchingQuestProgress: normalizeBranchingQuestProgress(saved.branchingQuestProgress),
+    randomEvents: normalizeRandomEvents(saved.randomEvents),
+    navigation: normalizeNavigation(saved.navigation, base.navigation),
     inventory: { ...base.inventory, ...(saved.inventory || {}) },
     completedQuizzes,
     completedTasks: { ...base.completedTasks, ...(saved.completedTasks || {}) },
@@ -73,6 +78,130 @@ export function normalizeState(saved) {
     money: Number.isFinite(saved.money) ? saved.money : base.money,
     freeReturnUsed: Boolean(saved.freeReturnUsed),
     victoryShown: Boolean(saved.victoryShown)
+  };
+}
+
+function normalizeNavigation(rawNavigation, fallback) {
+  const raw = rawNavigation && typeof rawNavigation === "object" ? rawNavigation : {};
+  const objective = raw.trackedObjective && typeof raw.trackedObjective === "object"
+    ? raw.trackedObjective
+    : null;
+  const validTypes = new Set([
+    "landmark", "npc", "questPoint", "shop", "vehicleShop", "busStop", "parking",
+    "church", "photoSpot", "event", "returnPoint", "environmentInteraction", "exit",
+    "map", "branchingQuest"
+  ]);
+  const trackedObjective = objective && validTypes.has(objective.type)
+    ? {
+      id: typeof objective.id === "string" ? objective.id : `${objective.type}-${objective.targetId || "target"}`,
+      type: objective.type,
+      mapId: maps[objective.mapId] ? objective.mapId : null,
+      targetId: typeof objective.targetId === "string" ? objective.targetId : null,
+      targetPosition: objective.targetPosition && Number.isFinite(objective.targetPosition.x) && Number.isFinite(objective.targetPosition.y)
+        ? { x: objective.targetPosition.x, y: objective.targetPosition.y }
+        : null,
+      label: typeof objective.label === "string" ? objective.label : "Mục tiêu",
+      description: typeof objective.description === "string" ? objective.description : "",
+      questId: typeof objective.questId === "string" ? objective.questId : null,
+      routeMode: ["auto", "walking", "vehicle"].includes(objective.routeMode) ? objective.routeMode : "auto",
+      isTemporary: Boolean(objective.isTemporary)
+    }
+    : null;
+  return {
+    trackedObjective,
+    showWorldGuidance: typeof raw.showWorldGuidance === "boolean" ? raw.showWorldGuidance : fallback.showWorldGuidance
+  };
+}
+
+function normalizeRandomEvents(rawEvents) {
+  const source = rawEvents && typeof rawEvents === "object" ? rawEvents : {};
+  const active = {};
+  Object.entries(source.active || {}).forEach(([eventId, raw]) => {
+    const definition = randomEventsById[eventId];
+    if (!definition || !raw || typeof raw !== "object") return;
+    const startedAt = Math.max(0, Number(raw.startedAt) || 0);
+    const defaultEnd = startedAt + definition.durationGameMinutes;
+    active[eventId] = {
+      eventId,
+      mapId: typeof raw.mapId === "string" ? raw.mapId : (definition.mapId || "*"),
+      startedAt,
+      endsAt: Math.max(startedAt + 1, Number(raw.endsAt) || defaultEnd),
+      state: typeof raw.state === "string" ? raw.state : "active",
+      phase: typeof raw.phase === "string" ? raw.phase : "active",
+      interactionResolved: Boolean(raw.interactionResolved),
+      outcome: typeof raw.outcome === "string" ? raw.outcome : null
+    };
+  });
+
+  const cooldowns = {};
+  Object.entries(source.cooldowns || {}).forEach(([eventId, value]) => {
+    if (RANDOM_EVENT_IDS.has(eventId) && Number.isFinite(Number(value))) {
+      cooldowns[eventId] = Math.max(0, Number(value));
+    }
+  });
+
+  const completedFlags = {};
+  Object.entries(source.completedFlags || {}).forEach(([eventId, value]) => {
+    if (!RANDOM_EVENT_IDS.has(eventId)) return;
+    completedFlags[eventId] = value && typeof value === "object" && !Array.isArray(value)
+      ? { ...value }
+      : Boolean(value);
+  });
+
+  return { active, cooldowns, completedFlags };
+}
+
+function normalizeBranchingQuestProgress(rawProgress) {
+  const source = rawProgress && typeof rawProgress === "object" ? rawProgress : {};
+  const normalized = {};
+  Object.entries(source).forEach(([questId, raw]) => {
+    const quest = branchingQuests[questId];
+    if (!quest || !raw || typeof raw !== "object") return;
+    const status = ["active", "unresolved", "completed", "failed"].includes(raw.status) ? raw.status : "active";
+    const currentNodeId = quest.nodes[raw.currentNodeId] ? raw.currentNodeId : quest.startNodeId;
+    const currentNode = quest.nodes[currentNodeId];
+    const follower = normalizeQuestFollower(raw.follower);
+    normalized[questId] = {
+      status,
+      currentNodeId,
+      choices: Array.isArray(raw.choices) ? raw.choices.filter((value) => typeof value === "string") : [],
+      choiceLabels: Array.isArray(raw.choiceLabels) ? raw.choiceLabels.filter((value) => typeof value === "string") : [],
+      outcome: BRANCHING_OUTCOMES.includes(raw.outcome) ? raw.outcome : null,
+      rewardClaimed: Boolean(raw.rewardClaimed),
+      flags: raw.flags && typeof raw.flags === "object" && !Array.isArray(raw.flags) ? { ...raw.flags } : {},
+      activeObjective: ["completed", "failed"].includes(status) ? null : {
+        nodeId: currentNodeId,
+        type: currentNode.type,
+        objectiveType: currentNode.objective?.type || null
+      },
+      relatedNpcIds: Array.isArray(raw.relatedNpcIds)
+        ? Array.from(new Set(raw.relatedNpcIds.filter((value) => typeof value === "string")))
+        : [],
+      objectiveProgress: {
+        index: Math.max(0, Math.floor(Number(raw.objectiveProgress?.index) || 0)),
+        completedIds: Array.isArray(raw.objectiveProgress?.completedIds)
+          ? Array.from(new Set(raw.objectiveProgress.completedIds.filter((value) => typeof value === "string")))
+          : []
+      },
+      follower: status === "active" || status === "unresolved" ? follower : null,
+      startedAt: Number.isFinite(raw.startedAt) ? raw.startedAt : null,
+      completedAt: Number.isFinite(raw.completedAt) ? raw.completedAt : null
+    };
+  });
+  return normalized;
+}
+
+function normalizeQuestFollower(raw) {
+  if (!raw || typeof raw !== "object" || !raw.active || typeof raw.actorId !== "string") return null;
+  return {
+    active: true,
+    actorId: raw.actorId,
+    mapId: maps[raw.mapId] ? raw.mapId : null,
+    x: Number.isFinite(raw.x) ? raw.x : null,
+    y: Number.isFinite(raw.y) ? raw.y : null,
+    facing: ["up", "down", "left", "right"].includes(raw.facing) ? raw.facing : "down",
+    groupCount: Math.max(1, Math.min(3, Math.floor(Number(raw.groupCount) || 1))),
+    speed: Math.max(0.8, Math.min(3, Number(raw.speed) || 2.15))
   };
 }
 
@@ -97,6 +226,10 @@ function normalizePhotoAlbum(rawAlbum, fallback) {
       mapId: spot.mapId,
       playerGender: ["male", "female"].includes(photo.playerGender) ? photo.playerGender : null,
       withMo: Boolean(photo.withMo),
+      eventId: RANDOM_EVENT_IDS.has(photo.eventId) ? photo.eventId : null,
+      eventTags: Array.isArray(photo.eventTags)
+        ? Array.from(new Set(photo.eventTags.filter((tag) => typeof tag === "string"))).slice(0, 8)
+        : [],
       capturedAt: typeof photo.capturedAt === "string" ? photo.capturedAt : null
     };
   });
@@ -156,11 +289,12 @@ function normalizeVehicle(saved) {
   const type = vehicleCatalog[rawVehicle.type] ? rawVehicle.type : VINFAST_VEHICLE_ID;
   const owned = Boolean(rawVehicle.owned);
   const parkedAt = normalizeParkedAt(rawVehicle.parkedAt);
+  const walkingBike = owned && rawVehicle.status === "walking-bike" && !parkedAt;
   return {
     owned,
     type,
-    equipped: false,
-    status: owned && parkedAt ? "parked" : "stored",
+    equipped: walkingBike,
+    status: owned && parkedAt ? "parked" : walkingBike ? "walking-bike" : "stored",
     parkedAt
   };
 }
@@ -184,8 +318,11 @@ function normalizeParkedAt(rawParkedAt) {
 }
 
 export function saveGame() {
-  state.player.x = Math.round(player.x);
-  state.player.y = Math.round(player.y);
+  const interactionOrigin = runtime.environmentInteraction?.active
+    ? runtime.environmentInteraction.origin
+    : null;
+  state.player.x = Math.round(interactionOrigin?.x ?? player.x);
+  state.player.y = Math.round(interactionOrigin?.y ?? player.y);
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   } catch (error) {

@@ -9,6 +9,7 @@ import { drawGroundShadow } from "./renderPixelEffects.js";
 import { drawNpcRainGear } from "./renderWeather.js";
 import { getNpcReactionVisual } from "../systems/npcReactions.js";
 import { drawNpcReactionOverlay } from "./renderNpcReactions.js";
+import { getVisibleBranchingQuestActors } from "../systems/branchingQuest.js";
 
 export function drawScheduledNpcs(map) {
   if (map.id === "hoanKiem") {
@@ -83,7 +84,8 @@ function drawMoNeighborhood() {
 }
 
 function drawNeighborhoodChildren() {
-  const children = getMoChildren();
+  const replacedIds = new Set(getVisibleBranchingQuestActors("hoanKiem").map((actor) => actor.replacesScheduledNpcId).filter(Boolean));
+  const children = getMoChildren().filter((child) => !replacedIds.has(child.id));
   const phase = performance.now() / 430;
   children.forEach((child, index) => {
     const reaction = getNpcReactionVisual(child);

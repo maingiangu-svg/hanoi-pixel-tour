@@ -100,6 +100,23 @@ export function playCameraShutter() {
   });
 }
 
+export function playTrainPassCue() {
+  if (!unlocked || !settings.soundEnabled || !audioContext || !masterGain) return;
+  const now = audioContext.currentTime;
+  [0, 0.22, 0.44].forEach((delay, index) => {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = index % 2 ? "square" : "triangle";
+    oscillator.frequency.setValueAtTime(112 - index * 9, now + delay);
+    gain.gain.setValueAtTime(0.0001, now + delay);
+    gain.gain.exponentialRampToValueAtTime(0.026 * settings.effectsVolume, now + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.17);
+    oscillator.connect(gain).connect(masterGain);
+    oscillator.start(now + delay);
+    oscillator.stop(now + delay + 0.19);
+  });
+}
+
 export function getAudioSettings() {
   return { ...settings };
 }

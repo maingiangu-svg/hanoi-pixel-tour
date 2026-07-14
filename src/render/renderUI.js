@@ -4,9 +4,10 @@ import { formatGameTimeHud } from "../utils/gameTime.js";
 import { renderInventory } from "../systems/inventory.js";
 import { renderJournal } from "../systems/journal.js";
 import { getCurrentObjective, renderQuestLog } from "../systems/questSystem.js";
-import { getVehicleData, isRidingVehicle, isVehicleOwned } from "../systems/vehicle.js";
+import { getVehicleData, isRidingVehicle, isVehicleOwned, isWalkingBike } from "../systems/vehicle.js";
 import { getVehicleParkingLabel, isVehicleParked } from "../systems/parking.js";
 import { getCurrentAreaAmbience } from "../systems/areaAmbience.js";
+import { getNavigationHudText } from "../systems/navigation.js";
 
 export function drawPixelRect(x, y, width, height, fill, stroke, strokeWidth) {
   ctx.fillStyle = fill;
@@ -66,12 +67,14 @@ export function updateHud() {
   updateClockHud();
   ui.hudObjective.textContent = state.moCompanion?.active
     ? "Đưa Mơ về Nhà thờ Lớn để thời gian tiếp tục."
-    : getCurrentObjective();
+    : (getNavigationHudText() || getCurrentObjective());
 
   if (isVehicleOwned()) {
     const vehicle = getVehicleData();
     ui.vehicleStatus.textContent = isRidingVehicle()
       ? (state.moCompanion?.ridingWithPlayer ? "Đang lái VinFast · Mơ ngồi sau" : "Đang lái VinFast · V cất xe")
+      : isWalkingBike()
+        ? "Đang dắt VinFast · V lên xe khi ra khỏi khu cấm"
       : isVehicleParked()
         ? `Xe gửi: ${getVehicleParkingLabel()}`
         : `${vehicle.name} · V gọi xe`;

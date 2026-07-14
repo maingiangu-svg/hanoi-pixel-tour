@@ -1,8 +1,21 @@
+import { FEMALE_BIKE_ANIMATIONS } from "../../assets/sprites/vehicle/female/female-bike-animations.js";
+
 const spriteSources = {
   characterMale: new URL("../../assets/sprites/character_male.png", import.meta.url).href,
   characterFemale: new URL("../../assets/sprites/character_female.png", import.meta.url).href,
-  vinfastBike: new URL("../../assets/sprites/vinfast-bike.png", import.meta.url).href
+  vinfastBike: new URL("../../assets/sprites/vinfast-bike.png", import.meta.url).href,
+  femaleBikeRideNoHelmet: resolvePageAsset(FEMALE_BIKE_ANIMATIONS.rideNoHelmet.src),
+  femaleBikeRideHelmet: resolvePageAsset(FEMALE_BIKE_ANIMATIONS.rideHelmet.src),
+  femaleBikeDismountNoHelmet: resolvePageAsset(FEMALE_BIKE_ANIMATIONS.dismountNoHelmet.src),
+  femaleBikeDismountHelmet: resolvePageAsset(FEMALE_BIKE_ANIMATIONS.dismountHelmet.src)
 };
+
+const femaleBikeAssetIds = Object.freeze({
+  rideNoHelmet: "femaleBikeRideNoHelmet",
+  rideHelmet: "femaleBikeRideHelmet",
+  dismountNoHelmet: "femaleBikeDismountNoHelmet",
+  dismountHelmet: "femaleBikeDismountHelmet"
+});
 
 const spriteAssets = Object.fromEntries(
   Object.entries(spriteSources).map(([id, src]) => [id, createSpriteAsset(id, src)])
@@ -18,6 +31,10 @@ export function getCharacterSprite(gender) {
 
 export function getVinfastBikeSprite() {
   return getSpriteAsset("vinfastBike");
+}
+
+export function getFemaleBikeAnimationSprite(animationId) {
+  return getSpriteAsset(femaleBikeAssetIds[animationId]);
 }
 
 export function isSpriteReady(asset) {
@@ -41,7 +58,8 @@ function createSpriteAsset(id, src) {
     drawable: null,
     width: 0,
     height: 0,
-    removedWhiteBorder: false
+    removedWhiteBorder: false,
+    preserveFrameGrid: id.startsWith("femaleBike")
   };
 }
 
@@ -61,6 +79,13 @@ function loadSpriteAsset(asset) {
 
   image.addEventListener("load", () => {
     try {
+      if (asset.preserveFrameGrid) {
+        asset.drawable = image;
+        asset.width = image.naturalWidth;
+        asset.height = image.naturalHeight;
+        asset.status = "ready";
+        return;
+      }
       const prepared = preparePixelSprite(image);
       asset.drawable = prepared.drawable;
       asset.width = prepared.width;
@@ -81,6 +106,13 @@ function loadSpriteAsset(asset) {
   }, { once: true });
 
   image.src = asset.src;
+}
+
+function resolvePageAsset(path) {
+  if (typeof document !== "undefined" && typeof document.baseURI === "string" && document.baseURI) {
+    return new URL(path, document.baseURI).href;
+  }
+  return new URL(`../../${path.replace(/^\.\//, "")}`, import.meta.url).href;
 }
 
 function preparePixelSprite(image) {

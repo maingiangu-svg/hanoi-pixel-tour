@@ -88,6 +88,12 @@ export function getAreaTrafficSpeedMultiplier(mapId, x, y) {
   return 0.88 + profile.trafficDensity * 0.18;
 }
 
+export function getAreaEventActivityFactor(mapId, x, y) {
+  const profile = getAreaProfile(mapId, x, y);
+  const density = getProfileDensity(profile, getMinuteOfDay(state.gameTime));
+  return Math.min(1.25, profile.crowdDensity * density * getAreaWeatherFactor(profile));
+}
+
 export function getAreaProfileForPosition(mapId, x, y) {
   return getAreaProfile(mapId, x, y);
 }
@@ -112,7 +118,7 @@ function buildSoundTargets({ profile, density, weatherIntensity }) {
 function updateCathedralBell({ profile }) {
   if (profile.id !== "cathedralExterior" && profile.id !== "churchInterior") return;
   const minuteOfDay = getMinuteOfDay(state.gameTime);
-  const bellMinute = [17 * 60 + 55, 18 * 60, 19 * 60].find((minute) => minuteOfDay === minute);
+  const bellMinute = [17 * 60 + 45, 18 * 60, 19 * 60].find((minute) => minuteOfDay === minute);
   if (bellMinute === undefined) return;
   const key = `${state.gameTime.day}:${bellMinute}`;
   if (key === lastBellKey) return;

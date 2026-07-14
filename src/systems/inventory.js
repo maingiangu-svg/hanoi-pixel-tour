@@ -2,7 +2,7 @@ import { state, ui } from "../state.js";
 import { formatMoney } from "../utils/format.js";
 import { closePanelOverlays } from "./modal.js";
 import { openCharacterSelection } from "./characterSelection.js";
-import { getVehicleData, isRidingVehicle, isVehicleOwned } from "./vehicle.js";
+import { getVehicleData, isRidingVehicle, isVehicleOwned, isWalkingBike } from "./vehicle.js";
 import { getVehicleParkingLabel, isVehicleParked } from "./parking.js";
 import { getVisitedTourMapCount } from "./questSystem.js";
 
@@ -106,6 +106,10 @@ function getVehicleLabel() {
   const vehicle = getVehicleData();
   if (isRidingVehicle()) {
     return `${vehicle.name} (đang lái)`;
+  }
+
+  if (isWalkingBike()) {
+    return `${vehicle.name} (đang dắt)`;
   }
 
   if (isVehicleParked()) {

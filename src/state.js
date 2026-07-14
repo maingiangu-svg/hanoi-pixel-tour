@@ -93,6 +93,16 @@ export function createDefaultState() {
       photos: {},
       discoveredSpots: []
     },
+    branchingQuestProgress: {},
+    randomEvents: {
+      active: {},
+      cooldowns: {},
+      completedFlags: {}
+    },
+    navigation: {
+      trackedObjective: null,
+      showWorldGuidance: true
+    },
     money: 50000,
     inventory: { foods: [], souvenirs: [], stamps: [], specialItems: [] },
     completedQuizzes: {},
@@ -128,16 +138,41 @@ export const runtime = {
   scheduledMo: null,
   churchService: null,
   scheduledCollisionBlocks: [],
+  eventCollisionBlocks: [],
   moCompanionNpc: null,
   moCompanionHydrated: false,
   lastVehicleRestrictionId: null,
   lastVehicleRestrictionAt: 0,
+  vehicleTransition: null,
+  vehicleToggleBlockedUntil: 0,
   playerMotionX: 0,
   playerMotionY: 0,
   playerMotionSpeed: 0,
   photoMode: {
     active: false,
     openedAt: 0
+  },
+  environmentInteraction: {
+    active: false,
+    id: null,
+    type: null,
+    mapId: null,
+    interaction: null,
+    origin: null,
+    pose: null,
+    startedAt: 0,
+    allowPhoto: false,
+    cameraFocus: null,
+    companionPose: null,
+    statusText: ""
+  },
+  navigation: {
+    resolvedObjective: null,
+    route: [],
+    routeKey: "",
+    routeMode: "walking",
+    currentRouteMapId: null,
+    debugGraph: false
   },
   photoFlashUntil: 0
 };

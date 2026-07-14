@@ -22,6 +22,10 @@ import { isRidingVehicle } from "../systems/vehicle.js";
 import { drawAreaVisualAmbience } from "./renderAreaAmbience.js";
 import { drawVehicleHornIndicator } from "./renderNpcReactions.js";
 import { drawPhotoModeOverlay, drawPhotoSpots } from "./renderPhotoMode.js";
+import { drawBranchingQuestActors } from "./renderBranchingQuests.js";
+import { drawRandomEvents } from "./renderRandomEvents.js";
+import { drawEnvironmentInteractionMarkers } from "./renderEnvironmentInteractions.js";
+import { drawNavigationGuidance } from "./renderNavigation.js";
 
 export function drawGame() {
   const map = getCurrentMap();
@@ -45,6 +49,9 @@ export function drawGame() {
     drawAmbientVehicles(map);
     drawNpcs(map);
   }
+  drawBranchingQuestActors(map);
+  drawRandomEvents(map);
+  drawEnvironmentInteractionMarkers(map);
   if (!runtime.photoMode?.active) {
     drawInteractionPoints(map);
   }
@@ -55,6 +62,7 @@ export function drawGame() {
   drawVehicleHornIndicator();
   ctx.restore();
   drawRainOverlay(map);
+  drawNavigationGuidance();
   drawPhotoModeOverlay();
   drawMapTransition();
 }

@@ -1,17 +1,28 @@
 import { ctx, player, state } from "../state.js";
 import { isMoRidingWithPlayer } from "../systems/moCompanion.js";
+import { getVehicleTransition } from "../systems/vehicle.js";
+import { FEMALE_BIKE_ANIMATIONS } from "../../assets/sprites/vehicle/female/female-bike-animations.js";
 import { drawCharacterSprite, drawPreparedSprite } from "./renderCharacterSprite.js";
 import { drawMoVehiclePassenger } from "./renderCompanion.js";
-import { getVinfastBikeSprite, isSpriteReady } from "./spriteAssets.js";
+import { getFemaleBikeAnimationSprite, getVinfastBikeSprite, isSpriteReady } from "./spriteAssets.js";
 import { drawGroundShadow } from "./renderPixelEffects.js";
 
 const BIKE_WIDTH = 55;
+const FEMALE_BIKE_DRAW_HEIGHT = 70;
 
 export function drawVehicleWithRider() {
   const x = Math.round(player.x);
   const y = Math.round(player.y);
   const facing = player.facing;
   const bob = player.moving ? Math.round(Math.sin(player.step) * 1) : 0;
+
+  if (isFemaleHorizontalFacing(facing) && drawFemaleBikeRide(x, y + bob, facing)) {
+    if (isMoRidingWithPlayer()) {
+      drawMoVehiclePassenger(x, y + bob - 10, facing);
+    }
+    return;
+  }
+
   const usingBikeSprite = drawAssetVehicle(x, y + bob, facing);
 
   if (!usingBikeSprite) {
@@ -25,6 +36,146 @@ export function drawVehicleWithRider() {
   if (!usingBikeSprite || !drawAssetRider(x, y + bob, facing)) {
     drawFallbackRider(x, y + bob, facing);
   }
+}
+
+export function drawWalkingBikeWithPlayer() {
+  const x = Math.round(player.x);
+  const y = Math.round(player.y);
+  const facing = player.facing;
+  const horizontal = facing === "left" || facing === "right";
+  const side = facing === "left" ? -1 : 1;
+  const bikeX = horizontal ? x + side * 18 : x + 18;
+  const bikeY = horizontal ? y + 5 : y + 8;
+
+  if (horizontal) {
+    if (!drawPushedBikeAsset(bikeX, bikeY, facing)) drawSideVehicle(bikeX, bikeY, facing);
+  } else {
+    drawVerticalVehicle(bikeX, bikeY, facing);
+  }
+
+  const bob = player.moving ? Math.round(Math.sin(player.step) * 1) : 0;
+  const riderDrawn = drawCharacterSprite({
+    gender: getGender(),
+    centerX: x + player.width / 2,
+    topY: y - 10 + bob,
+    height: 48,
+    facing
+  });
+  if (!riderDrawn) drawFallbackPushingPlayer(x, y + bob, facing);
+
+  ctx.fillStyle = "#f0c39b";
+  if (horizontal) {
+    ctx.fillRect(facing === "right" ? x + 18 : x - 1, y + 15 + bob, 12, 4);
+  } else {
+    ctx.fillRect(x + 17, y + 17 + bob, 9, 4);
+  }
+}
+
+export function drawFemaleVehicleTransition() {
+  const transition = getVehicleTransition();
+  if (!transition || state.profile.gender !== "female") {
+    return false;
+  }
+
+  const primaryAnimation = FEMALE_BIKE_ANIMATIONS.dismountHelmet;
+  const primaryAsset = getFemaleBikeAnimationSprite("dismountHelmet");
+  const fallbackAnimation = FEMALE_BIKE_ANIMATIONS.dismountNoHelmet;
+  const fallbackAsset = getFemaleBikeAnimationSprite("dismountNoHelmet");
+  const usingPrimaryAsset = isSpriteReady(primaryAsset);
+  const animation = usingPrimaryAsset ? primaryAnimation : fallbackAnimation;
+  const asset = usingPrimaryAsset ? primaryAsset : fallbackAsset;
+  if (!isSpriteReady(asset)) {
+    return false;
+  }
+
+  const progress = Math.min(0.999, Math.max(0, (performance.now() - transition.startedAt) / transition.durationMs));
+  const forwardFrame = Math.min(animation.frameCount - 1, Math.floor(progress * animation.frameCount));
+  const frameIndex = transition.type === "mounting"
+    ? animation.frameCount - 1 - forwardFrame
+    : forwardFrame;
+  const x = Math.round(player.x);
+  const y = Math.round(player.y);
+  const facing = transition.visualFacing === "left" ? "left" : "right";
+
+  drawFemaleBikeShadow(x, y);
+  if (transition.type === "dismounting" && isMoRidingWithPlayer()) {
+    drawMoVehiclePassenger(x, y - 10, facing);
+  }
+  return drawFemaleBikeFrame(asset, animation, frameIndex, x, y, facing, FEMALE_BIKE_DRAW_HEIGHT);
+}
+
+export function drawFemaleBikeDealershipPreview(centerX, bottomY) {
+  const animation = FEMALE_BIKE_ANIMATIONS.rideNoHelmet;
+  const asset = getFemaleBikeAnimationSprite("rideNoHelmet");
+  if (!isSpriteReady(asset)) {
+    return false;
+  }
+
+  return drawSheetFrame(asset, animation, animation.idleFrame, {
+    centerX,
+    bottomY,
+    height: 43,
+    flipHorizontal: false
+  });
+}
+
+function drawFemaleBikeRide(x, y, facing) {
+  if (state.profile.gender !== "female") {
+    return false;
+  }
+
+  const animation = FEMALE_BIKE_ANIMATIONS.rideHelmet;
+  const asset = getFemaleBikeAnimationSprite("rideHelmet");
+  if (!isSpriteReady(asset)) {
+    return false;
+  }
+
+  const frameIndex = player.moving
+    ? Math.floor(performance.now() / (1000 / animation.fps)) % animation.frameCount
+    : animation.idleFrame;
+  drawFemaleBikeShadow(x, y);
+  return drawFemaleBikeFrame(asset, animation, frameIndex, x, y, facing, FEMALE_BIKE_DRAW_HEIGHT);
+}
+
+function drawFemaleBikeFrame(asset, animation, frameIndex, x, y, facing, height) {
+  return drawSheetFrame(asset, animation, frameIndex, {
+    centerX: x + player.width / 2,
+    bottomY: y + 51,
+    height,
+    flipHorizontal: facing !== animation.sourceFacing
+  });
+}
+
+function drawSheetFrame(asset, animation, frameIndex, options) {
+  if (!isSpriteReady(asset)) {
+    return false;
+  }
+
+  const height = Math.max(1, Math.round(options.height));
+  const width = Math.max(1, Math.round(height * animation.frameWidth / animation.frameHeight));
+  const x = Math.round(options.centerX - width / 2);
+  const y = Math.round(options.bottomY - height);
+  const sourceX = Math.max(0, Math.min(animation.frameCount - 1, frameIndex)) * animation.frameWidth;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  if (options.flipHorizontal) {
+    ctx.translate(x + width, y);
+    ctx.scale(-1, 1);
+    ctx.drawImage(asset.drawable, sourceX, 0, animation.frameWidth, animation.frameHeight, 0, 0, width, height);
+  } else {
+    ctx.drawImage(asset.drawable, sourceX, 0, animation.frameWidth, animation.frameHeight, x, y, width, height);
+  }
+  ctx.restore();
+  return true;
+}
+
+function drawFemaleBikeShadow(x, y) {
+  drawGroundShadow(x + player.width / 2, y + 47, 51, 7);
+}
+
+function isFemaleHorizontalFacing(facing) {
+  return state.profile.gender === "female" && (facing === "left" || facing === "right");
 }
 
 function drawAssetVehicle(x, y, facing) {
@@ -45,6 +196,33 @@ function drawAssetVehicle(x, y, facing) {
     height,
     flipHorizontal: facing === "right"
   });
+}
+
+function drawPushedBikeAsset(x, y, facing) {
+  const asset = getVinfastBikeSprite();
+  if (!isSpriteReady(asset)) return false;
+  const width = 48;
+  const height = Math.max(1, Math.round(width * (asset.height / asset.width)));
+  drawGroundShadow(x + 12, y + height - 3, 43, 6);
+  return drawPreparedSprite(asset, {
+    x: Math.round(x - width / 2),
+    y,
+    width,
+    height,
+    flipHorizontal: facing === "right"
+  });
+}
+
+function drawFallbackPushingPlayer(x, y, facing) {
+  drawGroundShadow(x + player.width / 2, y + 31, player.width + 8, 6);
+  ctx.fillStyle = getGender() === "female" ? "#2fa38b" : "#d8484f";
+  ctx.fillRect(x + 3, y + 12, 18, 18);
+  ctx.fillStyle = "#f0c39b";
+  ctx.fillRect(x + 5, y, 14, 14);
+  ctx.fillStyle = "#2b2b32";
+  ctx.fillRect(x + 4, y + 30, 6, 7);
+  ctx.fillRect(x + 14, y + 30, 6, 7);
+  ctx.fillRect(facing === "left" ? x + 3 : x + 13, y, 8, 5);
 }
 
 function drawAssetRider(x, y, facing) {

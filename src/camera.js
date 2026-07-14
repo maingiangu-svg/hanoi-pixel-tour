@@ -1,4 +1,4 @@
-import { canvas, player, state } from "./state.js";
+import { canvas, player, runtime, state } from "./state.js";
 import { getCurrentMap } from "./utils/helpers.js";
 
 export const camera = {
@@ -22,8 +22,14 @@ export function updateCamera({ snap = false } = {}) {
   camera.width = canvas.width;
   camera.height = canvas.height;
 
-  const targetX = clamp(player.x + player.width / 2 - camera.width / 2, 0, Math.max(0, worldWidth - camera.width));
-  const targetY = clamp(player.y + player.height / 2 - camera.height / 2, 0, Math.max(0, worldHeight - camera.height));
+  const playerCenterX = player.x + player.width / 2;
+  const playerCenterY = player.y + player.height / 2;
+  const focus = runtime.environmentInteraction?.active ? runtime.environmentInteraction.cameraFocus : null;
+  const focusStrength = Math.max(0, Math.min(1, Number(focus?.strength) || 0));
+  const centerX = focus ? playerCenterX + (focus.x - playerCenterX) * focusStrength : playerCenterX;
+  const centerY = focus ? playerCenterY + (focus.y - playerCenterY) * focusStrength : playerCenterY;
+  const targetX = clamp(centerX - camera.width / 2, 0, Math.max(0, worldWidth - camera.width));
+  const targetY = clamp(centerY - camera.height / 2, 0, Math.max(0, worldHeight - camera.height));
 
   if (snap) {
     camera.x = targetX;

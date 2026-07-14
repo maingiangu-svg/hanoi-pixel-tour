@@ -2,12 +2,13 @@ import { keys, player, runtime, state } from "../state.js";
 import { getVehicleRestrictedZoneAt, isPlayerAreaWalkable, isVehicleAreaWalkable } from "../utils/collision.js";
 import { isOverlayOpen } from "./modal.js";
 import { saveGameThrottled } from "../storage.js";
-import { getPlayerMoveSpeed, isRidingVehicle } from "./vehicle.js";
+import { getPlayerMoveSpeed, isRidingVehicle, isVehicleTransitionActive } from "./vehicle.js";
 import { showVehicleRestrictionMessage } from "./parking.js";
 import { notifyVehicleRestrictionReaction } from "./npcReactions.js";
+import { isEnvironmentMovementLocked } from "./environmentInteraction.js";
 
 export function movePlayer() {
-  if (isOverlayOpen() || runtime.photoMode?.active) {
+  if (isOverlayOpen() || runtime.photoMode?.active || isVehicleTransitionActive() || isEnvironmentMovementLocked()) {
     player.moving = false;
     clearPlayerMotion();
     return;

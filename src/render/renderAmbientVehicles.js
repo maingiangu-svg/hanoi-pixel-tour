@@ -4,6 +4,7 @@ import { drawGroundShadow } from "./renderPixelEffects.js";
 import { drawVehicleRainEffects } from "./renderWeather.js";
 import { getAmbientVehicleSpeedMultiplier, getWeatherIntensity, isRaining } from "../systems/weather.js";
 import { getAreaTrafficFactor, getAreaTrafficSpeedMultiplier } from "../systems/areaAmbience.js";
+import { getQuestTrafficSpeedMultiplier } from "../systems/questFollower.js";
 
 const routeRuntime = new Map();
 
@@ -35,7 +36,7 @@ function getRoutePosition(vehicle, time, mapId) {
   route.lastTime = time;
   const probeX = vehicle.start.x + (vehicle.end.x - vehicle.start.x) * route.progress;
   const probeY = vehicle.start.y + (vehicle.end.y - vehicle.start.y) * route.progress;
-  route.progress = (route.progress + elapsed * vehicle.speed * getAmbientVehicleSpeedMultiplier() * getAreaTrafficSpeedMultiplier(mapId, probeX, probeY)) % 1;
+  route.progress = (route.progress + elapsed * vehicle.speed * getAmbientVehicleSpeedMultiplier() * getAreaTrafficSpeedMultiplier(mapId, probeX, probeY) * getQuestTrafficSpeedMultiplier(mapId, probeX, probeY)) % 1;
   const progress = route.progress;
   const x = vehicle.start.x + (vehicle.end.x - vehicle.start.x) * progress;
   const y = vehicle.start.y + (vehicle.end.y - vehicle.start.y) * progress;

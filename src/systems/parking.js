@@ -5,6 +5,23 @@ import { saveGame } from "../storage.js";
 import { closeChoiceModal, openChoiceModal, showMessage } from "./modal.js";
 import { syncMoCompanionToPlayer } from "./moCompanion.js";
 
+export function startWalkingBike() {
+  if (!state.vehicle?.owned || isVehicleParked()) return false;
+
+  runtime.vehicleTransition = null;
+  state.vehicle = {
+    ...state.vehicle,
+    equipped: true,
+    status: "walking-bike",
+    parkedAt: null
+  };
+  player.moving = false;
+  runtime.vehicleToggleBlockedUntil = performance.now() + 160;
+  syncMoCompanionToPlayer({ force: true });
+  saveGame();
+  return true;
+}
+
 export function isVehicleParked() {
   return Boolean(state.vehicle?.owned && state.vehicle.status === "parked" && state.vehicle.parkedAt);
 }
@@ -47,7 +64,7 @@ export function showVehicleRestrictionMessage(zone) {
   showMessage(`${zone.message || "Khu vực này cần đi bộ. Hãy gửi xe trước."}${direction}`);
 }
 
-export function openParkingMenu(spot) {
+export function openParkingMenu(spot, { allowWalkingBike = false } = {}) {
   if (!state.vehicle?.owned) {
     openChoiceModal({
       tag: "Bãi gửi xe",
@@ -58,12 +75,34 @@ export function openParkingMenu(spot) {
     return;
   }
 
+  if (state.vehicle.status === "walking-bike") {
+    openChoiceModal({
+      tag: "Bãi gửi xe",
+      title: spot.name,
+      body: "Bạn đang dắt xe. Có thể tiếp tục dắt qua khu cho phép hoặc gửi xe tại đây.",
+      actions: [
+        { label: "Gửi xe", className: "primary-choice", onClick: () => parkVehicleAt(spot) },
+        { label: "Để sau", onClick: closeChoiceModal }
+      ]
+    });
+    return;
+  }
+
   if (state.vehicle.equipped) {
     openChoiceModal({
       tag: "Bãi gửi xe",
       title: spot.name,
       body: "Khu tham quan phía trước chỉ dành cho người đi bộ. Bạn muốn gửi xe máy điện VinFast tại đây chứ?",
       actions: [
+        ...(allowWalkingBike ? [{
+          label: "Dắt xe",
+          className: "primary-choice",
+          onClick: () => {
+            if (!startWalkingBike()) return;
+            closeChoiceModal();
+            showMessage("Bạn xuống xe và bắt đầu dắt bộ. Nhấn V để lên xe khi ra khỏi khu cấm.");
+          }
+        }] : []),
         { label: "Gửi xe", className: "primary-choice", onClick: () => parkVehicleAt(spot) },
         { label: "Để sau", onClick: closeChoiceModal }
       ]

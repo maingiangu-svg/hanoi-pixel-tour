@@ -2,16 +2,17 @@ import { keys, runtime, ui } from "./state.js";
 import { interact } from "./systems/interaction.js";
 import { toggleInventory } from "./systems/inventory.js";
 import { handleJournalKey, isJournalOpen, toggleJournal } from "./systems/journal.js";
-import { toggleQuestLog } from "./systems/questSystem.js";
+import { handleQuestLogKey, isQuestLogOpen, toggleQuestLog } from "./systems/questSystem.js";
 import { answerQuiz, closeQuiz, confirmSelectedQuizOption, moveQuizSelection, selectQuizOption } from "./systems/quiz.js";
 import { confirmReset } from "./storage.js";
 import { activateSelectedChoiceAction, activateSelectedInfoAction, closeAllOverlays, closeChoiceModal, closeInfoModal, isOverlayOpen, moveChoiceActionSelection, moveInfoActionSelection } from "./systems/modal.js";
 import { handleCharacterSelectionKey, isCharacterSelectionOpen, openCharacterSelection } from "./systems/characterSelection.js";
 import { toggleVehicle } from "./systems/vehicle.js";
-import { closeMapOverlay, isMapOverlayOpen, toggleMapOverlay } from "./systems/mapOverlay.js";
+import { closeMapOverlay, handleMapOverlayKey, isMapOverlayOpen, toggleMapOverlay } from "./systems/mapOverlay.js";
 import { closeAudioSettings, isAudioSettingsOpen } from "./systems/audioManager.js";
 import { triggerVehicleHorn } from "./systems/npcReactions.js";
 import { handlePhotoModeKey, isPhotoModeActive, togglePhotoMode } from "./systems/photoMode.js";
+import { handleEnvironmentInteractionKey, isEnvironmentInteractionActive } from "./systems/environmentInteraction.js";
 
 const movementKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"];
 const handledKeys = [...movementKeys, " ", "enter", "escape", "e", "h", "i", "q", "j", "m", "p", "r", "tab", "v"];
@@ -32,6 +33,7 @@ export function initInput() {
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
     if (handledKeys.includes(key)) event.preventDefault();
+    if (event.repeat && ["v", "e", "enter"].includes(key)) return;
 
     if (isCharacterSelectionOpen()) {
       handleCharacterSelectionKey(key);
@@ -39,9 +41,7 @@ export function initInput() {
     }
 
     if (isMapOverlayOpen()) {
-      if (key === "m" || key === "escape" || key === "enter") {
-        closeMapOverlay();
-      }
+      handleMapOverlayKey(key);
       return;
     }
 
@@ -109,8 +109,18 @@ export function initInput() {
       return;
     }
 
+    if (isEnvironmentInteractionActive()) {
+      handleEnvironmentInteractionKey(key);
+      return;
+    }
+
     if (isJournalOpen()) {
       handleJournalKey(key);
+      return;
+    }
+
+    if (isQuestLogOpen()) {
+      handleQuestLogKey(key);
       return;
     }
 

@@ -6,12 +6,14 @@ import { WEATHER_PROFILES } from "../data/weatherProfiles.js";
 import { addUnique, findLandmark } from "../utils/helpers.js";
 import { getCapturedPhoto, getPhotoRatingLabel, isPhotoSpotKnown } from "./photoMode.js";
 import { closePanelOverlays, openFoodInfoPanel, openLandmarkInfoPanel } from "./modal.js";
+import { setTrackedObjective } from "./navigation.js";
 
 const JOURNAL_VIEWS = ["notes", "album"];
 const ALBUM_COLUMNS = 2;
 let currentView = "notes";
 let selectedPhotoIndex = 0;
 let openPhotoId = null;
+let selectedJournalActionIndex = 0;
 
 export function toggleJournal() {
   if (isJournalOpen()) {
@@ -60,13 +62,19 @@ export function handleJournalKey(key) {
     return true;
   }
   if (currentView !== "album") {
+    const actions = [...ui.journalContent.querySelectorAll(".journal-nav-action")];
+    if (["arrowup", "w"].includes(key)) selectedJournalActionIndex = Math.max(0, selectedJournalActionIndex - 1);
+    if (["arrowdown", "s"].includes(key)) selectedJournalActionIndex = Math.min(Math.max(0, actions.length - 1), selectedJournalActionIndex + 1);
+    if (key === "enter") actions[selectedJournalActionIndex]?.click();
+    updateJournalActionSelection();
     return true;
   }
   if (openPhotoId) {
-    if (key === "enter" || key === " ") {
-      openPhotoId = null;
-      renderJournal();
-    }
+    const actions = [...ui.journalContent.querySelectorAll(".journal-nav-action")];
+    if (["arrowup", "w"].includes(key)) selectedJournalActionIndex = Math.max(0, selectedJournalActionIndex - 1);
+    else if (["arrowdown", "s"].includes(key)) selectedJournalActionIndex = Math.min(Math.max(0, actions.length - 1), selectedJournalActionIndex + 1);
+    else if (key === "enter" || key === " ") actions[selectedJournalActionIndex]?.click();
+    updateJournalActionSelection();
     return true;
   }
 
@@ -147,10 +155,19 @@ function renderNotes() {
       title: landmark.name,
       summary: detail ? detail.intro : landmark.description,
       buttonLabel: "Xem địa danh",
-      onClick: () => openLandmarkInfoPanel(landmark, { fromJournal: true })
+      onClick: () => openLandmarkInfoPanel(landmark, { fromJournal: true }),
+      navigationLabel: "Dẫn đường tới đây",
+      onNavigate: () => setTrackedObjective({
+        id: `journal-${landmark.id}`,
+        type: "landmark",
+        targetId: landmark.id,
+        label: landmark.name,
+        routeMode: "auto"
+      })
     }));
   });
   ui.journalContent.appendChild(grid);
+  updateJournalActionSelection();
 }
 
 function renderAlbum() {
@@ -184,7 +201,7 @@ function renderAlbum() {
     title.textContent = known ? spot.title : "Địa điểm chưa khám phá";
     const meta = document.createElement("small");
     meta.textContent = photo
-      ? `${getPhotoRatingLabel(photo.rating)} · Ngày ${photo.gameDay}, ${photo.gameTime}`
+      ? `${getPhotoRatingLabel(photo.rating)} · Ngày ${photo.gameDay}, ${photo.gameTime}${photo.eventId ? " · Sự kiện" : ""}`
       : known ? "Chưa chụp" : "Đang khóa";
     copy.append(title, meta);
     card.appendChild(copy);
@@ -221,7 +238,8 @@ function renderPhotoDetail(spotId) {
       ["Đánh giá", getPhotoRatingLabel(photo.rating)],
       ["Thời gian", `Ngày ${photo.gameDay} · ${photo.gameTime}`],
       ["Thời tiết", WEATHER_PROFILES[photo.weather]?.label || photo.weather],
-      ["Bạn đồng hành", photo.withMo ? "Chụp cùng Mơ" : "Ảnh cá nhân"]
+      ["Bạn đồng hành", photo.withMo ? "Chụp cùng Mơ" : "Ảnh cá nhân"],
+      ...(photo.eventId ? [["Khoảnh khắc", photo.eventTags?.join(" · ") || "Sự kiện Hà Nội"]] : [])
     ].forEach(([label, value]) => {
       const row = document.createElement("p");
       row.innerHTML = `<strong>${label}:</strong> ${value}`;
@@ -236,14 +254,31 @@ function renderPhotoDetail(spotId) {
   }
   const back = document.createElement("button");
   back.type = "button";
+  back.className = "journal-nav-action";
   back.textContent = "Quay lại album";
   back.addEventListener("click", () => {
     openPhotoId = null;
     renderJournal();
   });
+  if (!photo) {
+    const navigate = document.createElement("button");
+    navigate.type = "button";
+    navigate.className = "journal-nav-action";
+    navigate.textContent = "Tìm điểm chụp";
+    navigate.addEventListener("click", () => setTrackedObjective({
+      id: `album-${spot.id}`,
+      type: "photoSpot",
+      mapId: spot.mapId,
+      targetId: spot.id,
+      label: spot.title,
+      routeMode: "auto"
+    }));
+    copy.appendChild(navigate);
+  }
   copy.appendChild(back);
   detail.appendChild(copy);
   ui.journalContent.appendChild(detail);
+  updateJournalActionSelection();
 }
 
 function createPhotoPreview(spot, photo, large = false) {
@@ -288,7 +323,7 @@ export function createJournalStat(label, value) {
   return card;
 }
 
-export function createJournalCard({ title, summary, buttonLabel, onClick }) {
+export function createJournalCard({ title, summary, buttonLabel, onClick, navigationLabel = null, onNavigate = null }) {
   const card = document.createElement("article");
   card.className = "journal-card";
   const heading = document.createElement("h3");
@@ -300,7 +335,21 @@ export function createJournalCard({ title, summary, buttonLabel, onClick }) {
   button.textContent = buttonLabel;
   button.addEventListener("click", onClick);
   card.append(heading, text, button);
+  if (navigationLabel && onNavigate) {
+    const navigate = document.createElement("button");
+    navigate.type = "button";
+    navigate.className = "journal-nav-action";
+    navigate.textContent = navigationLabel;
+    navigate.addEventListener("click", onNavigate);
+    card.appendChild(navigate);
+  }
   return card;
+}
+
+function updateJournalActionSelection() {
+  const actions = [...ui.journalContent.querySelectorAll(".journal-nav-action")];
+  selectedJournalActionIndex = Math.max(0, Math.min(selectedJournalActionIndex, Math.max(0, actions.length - 1)));
+  actions.forEach((button, index) => button.classList.toggle("is-selected", index === selectedJournalActionIndex));
 }
 
 export function discoverFood(foodId) {

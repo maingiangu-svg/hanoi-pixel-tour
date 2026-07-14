@@ -1,16 +1,30 @@
 import { ctx, player, state } from "../state.js";
-import { isRidingVehicle } from "../systems/vehicle.js";
+import { isRidingVehicle, isVehicleTransitionActive, isWalkingBike } from "../systems/vehicle.js";
 import { drawCharacterSprite } from "./renderCharacterSprite.js";
-import { drawVehicleWithRider } from "./renderVehicle.js";
+import { drawFemaleVehicleTransition, drawVehicleWithRider, drawWalkingBikeWithPlayer } from "./renderVehicle.js";
 import { getCharacterSprite, isSpriteReady } from "./spriteAssets.js";
 import { drawGroundShadow } from "./renderPixelEffects.js";
+import { drawEnvironmentPlayerPose } from "./renderEnvironmentInteractions.js";
 
 const PLAYER_SPRITE_HEIGHT = 48;
 const FALLBACK_VISUAL_SCALE = 1.08;
 
 export function drawPlayer() {
+  if (isVehicleTransitionActive() && drawFemaleVehicleTransition()) {
+    return;
+  }
+
   if (isRidingVehicle()) {
     drawVehicleWithRider();
+    return;
+  }
+
+  if (isWalkingBike()) {
+    drawWalkingBikeWithPlayer();
+    return;
+  }
+
+  if (drawEnvironmentPlayerPose()) {
     return;
   }
 
