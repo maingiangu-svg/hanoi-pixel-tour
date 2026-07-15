@@ -2,6 +2,7 @@ import { ctx } from "../state.js";
 import { isRectVisible } from "../camera.js";
 import { drawPixelRect } from "./renderUI.js";
 import { drawGroundShadow, drawTallPixelShadow } from "./renderPixelEffects.js";
+import { drawSkyline } from "./renderSkyline.js";
 
 export function drawDecorations(map, layer) {
   map.decorations.forEach((decoration) => {
@@ -336,34 +337,6 @@ export function drawBridgeTruss(x, y, width) {
     ctx.lineTo(px + 104, y + 160);
   }
   ctx.stroke();
-}
-
-export function drawSkyline({ x, y, width = 520, height = 160 }) {
-  ctx.fillStyle = "rgba(0,0,0,0.16)";
-  ctx.fillRect(x, y + height - 12, width, 12);
-  const colors = ["#777b7c", "#8a867c", "#9b927f", "#6f777d", "#b0a58f"];
-  let px = x;
-  let index = 0;
-  while (px < x + width) {
-    const w = 44 + (index % 4) * 12;
-    const h = 60 + (index % 5) * 18;
-    const top = y + height - h;
-    ctx.fillStyle = colors[index % colors.length];
-    ctx.fillRect(px, top, w, h);
-    ctx.fillStyle = "#f5df91";
-    for (let wy = top + 16; wy < y + height - 18; wy += 22) {
-      for (let wx = px + 8; wx < px + w - 8; wx += 18) {
-        if ((wx + wy + index) % 3 !== 0) ctx.fillRect(wx, wy, 7, 8);
-      }
-    }
-    ctx.fillStyle = "#33363a";
-    ctx.fillRect(px + w - 14, top - 10, 8, 10);
-    if (index % 3 === 0) {
-      ctx.fillRect(px + w / 2, top - 18, 3, 18);
-    }
-    px += w + 10;
-    index += 1;
-  }
 }
 
 export function drawStreetSign(x, y, text) {

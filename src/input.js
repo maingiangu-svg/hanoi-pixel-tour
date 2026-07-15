@@ -13,6 +13,8 @@ import { closeAudioSettings, isAudioSettingsOpen } from "./systems/audioManager.
 import { triggerVehicleHorn } from "./systems/npcReactions.js";
 import { handlePhotoModeKey, isPhotoModeActive, togglePhotoMode } from "./systems/photoMode.js";
 import { handleEnvironmentInteractionKey, isEnvironmentInteractionActive } from "./systems/environmentInteraction.js";
+import { handleCutsceneKey, isCutsceneActive } from "./systems/cutscene.js";
+import { handleFinalEndingKey, isFinalEndingPanelOpen } from "./systems/finalEnding.js";
 
 const movementKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"];
 const handledKeys = [...movementKeys, " ", "enter", "escape", "e", "h", "i", "q", "j", "m", "p", "r", "tab", "v"];
@@ -33,7 +35,17 @@ export function initInput() {
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
     if (handledKeys.includes(key)) event.preventDefault();
-    if (event.repeat && ["v", "e", "enter"].includes(key)) return;
+    if (event.repeat && ["v", "e", "enter", " "].includes(key)) return;
+
+    if (isCutsceneActive()) {
+      handleCutsceneKey(key);
+      return;
+    }
+
+    if (isFinalEndingPanelOpen()) {
+      handleFinalEndingKey(key);
+      return;
+    }
 
     if (isCharacterSelectionOpen()) {
       handleCharacterSelectionKey(key);

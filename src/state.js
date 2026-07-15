@@ -1,4 +1,5 @@
 import { createDefaultWeatherState } from "./data/weatherProfiles.js";
+import { createDefaultStoryState } from "./data/storyState.js";
 
 export const canvas = document.getElementById("gameCanvas");
 export const ctx = canvas.getContext("2d");
@@ -66,7 +67,19 @@ export const ui = {
   ambienceVolume: document.getElementById("ambienceVolume"),
   ambienceVolumeValue: document.getElementById("ambienceVolumeValue"),
   effectsVolume: document.getElementById("effectsVolume"),
-  effectsVolumeValue: document.getElementById("effectsVolumeValue")
+  effectsVolumeValue: document.getElementById("effectsVolumeValue"),
+  gameFrame: document.getElementById("gameFrame"),
+  cutsceneDialogue: document.getElementById("cutsceneDialogue"),
+  cutsceneKind: document.getElementById("cutsceneKind"),
+  cutsceneSpeaker: document.getElementById("cutsceneSpeaker"),
+  cutsceneText: document.getElementById("cutsceneText"),
+  cutsceneChoices: document.getElementById("cutsceneChoices"),
+  cutsceneHint: document.getElementById("cutsceneHint"),
+  endingPanel: document.getElementById("endingPanel"),
+  endingTitle: document.getElementById("endingTitle"),
+  endingSubtitle: document.getElementById("endingSubtitle"),
+  endingContent: document.getElementById("endingContent"),
+  endingActions: document.getElementById("endingActions")
 };
 
 export function createDefaultState() {
@@ -103,6 +116,7 @@ export function createDefaultState() {
       trackedObjective: null,
       showWorldGuidance: true
     },
+    story: createDefaultStoryState(),
     money: 50000,
     inventory: { foods: [], souvenirs: [], stamps: [], specialItems: [] },
     completedQuizzes: {},
@@ -174,7 +188,38 @@ export const runtime = {
     currentRouteMapId: null,
     debugGraph: false
   },
-  photoFlashUntil: 0
+  photoFlashUntil: 0,
+  cutscene: null,
+  chapter1: {
+    active: false,
+    lastTimestamp: 0,
+    stage: null,
+    mo: null,
+    moInitialized: false
+  },
+  chapter2: {
+    active: false,
+    stage: null
+  },
+  chapter3: {
+    active: false,
+    stage: null,
+    autoStage: null,
+    mo: null
+  },
+  chapter4: {
+    active: false,
+    revealInProgress: false,
+    portalWaiting: false,
+    mo: null
+  },
+  finalEnding: {
+    choiceStarted: false,
+    endingStarted: false,
+    summaryPending: false,
+    summaryShown: false,
+    selectedIndex: 0
+  }
 };
 
 export const player = {

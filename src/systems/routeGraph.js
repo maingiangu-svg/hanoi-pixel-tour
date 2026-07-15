@@ -1,10 +1,15 @@
 import { maps } from "../data/maps.js";
 import { runtime } from "../state.js";
 
-const GRID_SIZE = 64;
+const GRID_SIZE = 48;
 const graphCache = new Map();
 const ROUTE_MODES = new Set(["walking", "vehicle", "pushingBike"]);
 const VEHICLE_ZONE_KINDS = new Set(["road", "bridge", "plaza", "courtyard"]);
+const NEIGHBOR_OFFSETS = Object.freeze(Array.from({ length: 5 }, (_, row) => row - 2).flatMap((gridY) =>
+  Array.from({ length: 5 }, (_, column) => column - 2)
+    .filter((gridX) => (gridX || gridY) && Math.hypot(gridX, gridY) <= 2.1)
+    .map((gridX) => [gridX * GRID_SIZE, gridY * GRID_SIZE])
+));
 
 export function findRoute(mapId, start, target, mode = "walking") {
   const map = maps[mapId];
@@ -18,12 +23,12 @@ export function findRoute(mapId, start, target, mode = "walking") {
   }
 
   const graph = getRouteGraph(mapId, normalizedMode);
-  const startNode = findNearestVisibleNode(graph, map, start, normalizedMode);
-  const targetNode = findNearestVisibleNode(graph, map, target, normalizedMode);
-  if (!startNode || !targetNode) return [];
+  const startNodes = findNearestVisibleNodes(graph, map, start, normalizedMode);
+  const targetNodes = findNearestVisibleNodes(graph, map, target, normalizedMode);
+  if (!startNodes.length || !targetNodes.length) return findGridFallbackRoute(map, start, target, normalizedMode);
 
-  const nodePath = findAStarPath(graph, startNode, targetNode);
-  if (!nodePath.length) return [];
+  const nodePath = findAStarPath(graph, startNodes, targetNodes);
+  if (!nodePath.length) return findGridFallbackRoute(map, start, target, normalizedMode);
   return simplifyRoute(map, [start, ...nodePath, target], normalizedMode).map(roundPoint);
 }
 
@@ -80,12 +85,23 @@ export function clearRouteGraphCache() {
   graphCache.clear();
 }
 
-function findAStarPath(graph, start, target) {
-  const open = [start];
-  const openKeys = new Set([start.key]);
+export function isRoutePointNavigable(mapId, point, mode = "walking") {
+  const map = maps[mapId];
+  return Boolean(map && isPointNavigable(map, point.x, point.y, mode));
+}
+
+export function isRouteSegmentNavigable(mapId, from, to, mode = "walking") {
+  const map = maps[mapId];
+  return Boolean(map && isSegmentNavigable(map, from, to, mode));
+}
+
+function findAStarPath(graph, starts, targets) {
+  const open = [...starts];
+  const openKeys = new Set(starts.map((node) => node.key));
+  const targetKeys = new Set(targets.map((node) => node.key));
   const cameFrom = new Map();
-  const gScore = new Map([[start.key, 0]]);
-  const fScore = new Map([[start.key, distance(start, target)]]);
+  const gScore = new Map(starts.map((node) => [node.key, 0]));
+  const fScore = new Map(starts.map((node) => [node.key, distanceToNearest(node, targets)]));
 
   while (open.length) {
     let bestIndex = 0;
@@ -94,14 +110,14 @@ function findAStarPath(graph, start, target) {
     }
     const current = open.splice(bestIndex, 1)[0];
     openKeys.delete(current.key);
-    if (current.key === target.key) return reconstructPath(cameFrom, graph, current.key);
+    if (targetKeys.has(current.key)) return reconstructPath(cameFrom, graph, current.key);
 
     getGraphNeighbors(graph, current).forEach((neighbor) => {
       const tentative = (gScore.get(current.key) ?? Infinity) + distance(current, neighbor);
       if (tentative >= (gScore.get(neighbor.key) ?? Infinity)) return;
       cameFrom.set(neighbor.key, current.key);
       gScore.set(neighbor.key, tentative);
-      fScore.set(neighbor.key, tentative + distance(neighbor, target));
+      fScore.set(neighbor.key, tentative + distanceToNearest(neighbor, targets));
       if (!openKeys.has(neighbor.key)) {
         open.push(neighbor);
         openKeys.add(neighbor.key);
@@ -113,11 +129,7 @@ function findAStarPath(graph, start, target) {
 
 function getGraphNeighbors(graph, node) {
   const result = [];
-  const offsets = [
-    [-GRID_SIZE, 0], [GRID_SIZE, 0], [0, -GRID_SIZE], [0, GRID_SIZE],
-    [-GRID_SIZE, -GRID_SIZE], [GRID_SIZE, -GRID_SIZE], [-GRID_SIZE, GRID_SIZE], [GRID_SIZE, GRID_SIZE]
-  ];
-  offsets.forEach(([dx, dy]) => {
+  NEIGHBOR_OFFSETS.forEach(([dx, dy]) => {
     const neighbor = graph.byKey.get(gridKey(node.x + dx, node.y + dy));
     if (!neighbor) return;
     const map = maps[graph.mapId];
@@ -126,12 +138,14 @@ function getGraphNeighbors(graph, node) {
   return result;
 }
 
-function findNearestVisibleNode(graph, map, point, mode) {
-  const candidates = graph.nodes
+function findNearestVisibleNodes(graph, map, point, mode) {
+  return graph.nodes
     .map((node) => ({ node, distance: distance(point, node) }))
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, 28);
-  return candidates.find(({ node }) => isSegmentNavigable(map, point, node, mode))?.node || null;
+    .slice(0, 48)
+    .filter(({ node }) => isSegmentNavigable(map, point, node, mode))
+    .slice(0, 12)
+    .map(({ node }) => node);
 }
 
 function simplifyRoute(map, route, mode) {
@@ -145,6 +159,46 @@ function simplifyRoute(map, route, mode) {
     anchor = next;
   }
   return result;
+}
+
+function findGridFallbackRoute(map, start, target, mode) {
+  const stepSize = 32;
+  const directions = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  const startKey = "0:0";
+  const queue = [{ ix: 0, iy: 0, x: start.x, y: start.y, key: startKey }];
+  const visited = new Set([startKey]);
+  const cameFrom = new Map();
+  const points = new Map([[startKey, start]]);
+  let cursor = 0;
+  let reachedKey = null;
+
+  while (cursor < queue.length && queue.length < 12000) {
+    const current = queue[cursor++];
+    if (distance(current, target) <= stepSize * 2.5 && isSegmentNavigable(map, current, target, mode)) {
+      reachedKey = current.key;
+      break;
+    }
+    directions.forEach(([dx, dy]) => {
+      const ix = current.ix + dx;
+      const iy = current.iy + dy;
+      const key = `${ix}:${iy}`;
+      if (visited.has(key)) return;
+      const point = { ix, iy, x: start.x + ix * stepSize, y: start.y + iy * stepSize, key };
+      if (!isPointNavigable(map, point.x, point.y, mode) || !isSegmentNavigable(map, current, point, mode)) return;
+      visited.add(key);
+      cameFrom.set(key, current.key);
+      points.set(key, point);
+      queue.push(point);
+    });
+  }
+  if (!reachedKey) return [];
+  const route = [target];
+  let currentKey = reachedKey;
+  while (currentKey) {
+    route.unshift(points.get(currentKey));
+    currentKey = cameFrom.get(currentKey);
+  }
+  return simplifyRoute(map, route, mode).map(roundPoint);
 }
 
 function isSegmentNavigable(map, from, to, mode, includeEventBlocks = true) {
@@ -210,6 +264,10 @@ function pointInExpandedRect(x, y, rect, margin) {
 
 function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function distanceToNearest(point, targets) {
+  return targets.reduce((best, target) => Math.min(best, distance(point, target)), Infinity);
 }
 
 function roundPoint(point) {

@@ -21,7 +21,7 @@
         </div>
       </div>
 
-      <div class="game-frame">
+      <div id="gameFrame" class="game-frame">
         <canvas id="gameCanvas" width="1280" height="720"></canvas>
 
         <div id="topBar" class="top-bar" aria-live="polite">
@@ -47,6 +47,14 @@
         <div id="dialogueBox" class="dialogue-box hidden" role="status" aria-live="polite">
           <p id="dialogueText"></p>
         </div>
+
+        <section id="cutsceneDialogue" class="cutscene-dialogue hidden" role="dialog" aria-live="polite" aria-labelledby="cutsceneSpeaker">
+          <p id="cutsceneKind" class="cutscene-kind">Hội thoại</p>
+          <h2 id="cutsceneSpeaker" class="cutscene-speaker"></h2>
+          <p id="cutsceneText" class="cutscene-text"></p>
+          <div id="cutsceneChoices" class="cutscene-choices"></div>
+          <p id="cutsceneHint" class="cutscene-hint">Enter/Space: Tiếp tục</p>
+        </section>
       </div>
     </section>
   </main>
@@ -81,6 +89,19 @@
         <button id="closeJournal" class="panel-close" type="button">Đóng</button>
       </div>
       <div id="journalContent" class="panel-content"></div>
+    </article>
+  </div>
+
+  <div id="endingPanel" class="panel-overlay ending-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="endingTitle">
+    <article class="panel panel-wide ending-journal">
+      <header class="ending-journal-header">
+        <p id="endingSubtitle" class="modal-tag">Đoạn kết</p>
+        <h2 id="endingTitle">Nhật ký hành trình</h2>
+        <p>Mỗi dấu ấn dưới đây là một phần Hà Nội đã cùng bạn tìm lại.</p>
+      </header>
+      <div id="endingContent" class="ending-journal-content"></div>
+      <div id="endingActions" class="ending-actions" aria-label="Lựa chọn sau đoạn kết"></div>
+      <p class="info-hint">W/S hoặc ↑/↓: Chọn · Enter: Xác nhận</p>
     </article>
   </div>
 

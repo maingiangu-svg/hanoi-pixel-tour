@@ -119,7 +119,7 @@ function drawPlasticStool(x, y, color) {
   ctx.fillRect(x + 9, y + 8, 3, 8);
 }
 
-function drawSpeechBubble(centerX, bottomY, text) {
+export function drawSpeechBubble(centerX, bottomY, text) {
   ctx.font = "900 9px 'Courier New', monospace";
   const lines = wrapSpeech(text, 18);
   const width = Math.min(152, Math.max(80, ...lines.map((line) => Math.ceil(ctx.measureText(line).width) + 14)));

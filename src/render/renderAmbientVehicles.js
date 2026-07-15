@@ -5,12 +5,15 @@ import { drawVehicleRainEffects } from "./renderWeather.js";
 import { getAmbientVehicleSpeedMultiplier, getWeatherIntensity, isRaining } from "../systems/weather.js";
 import { getAreaTrafficFactor, getAreaTrafficSpeedMultiplier } from "../systems/areaAmbience.js";
 import { getQuestTrafficSpeedMultiplier } from "../systems/questFollower.js";
+import { getNightStrength } from "./renderLighting.js";
 
 const routeRuntime = new Map();
 
 export function drawAmbientVehicles(map) {
   const time = performance.now() / 1000;
+  const nightStrength = getNightStrength();
   (map.ambientVehicles || []).forEach((vehicle, index) => {
+    if (vehicle.nightOnly && nightStrength < 0.34) return;
     const position = getRoutePosition(vehicle, time, map.id);
     const trafficFactor = getAreaTrafficFactor(map.id, position.x, position.y);
     const priority = vehicle.areaPriority ?? (0.16 + index * 0.26);
@@ -22,7 +25,7 @@ export function drawAmbientVehicles(map) {
       return;
     }
 
-    drawAmbientScooter(position.x, position.y, position.direction, vehicle, time);
+    drawAmbientScooter(position.x, position.y, position.direction, vehicle, time, nightStrength);
   });
 }
 
@@ -46,7 +49,8 @@ function getRoutePosition(vehicle, time, mapId) {
   return { x: Math.round(x), y: Math.round(y), direction };
 }
 
-function drawAmbientScooter(x, y, direction, vehicle, time) {
+function drawAmbientScooter(x, y, direction, vehicle, time, nightStrength) {
+  drawScooterNightLights(x, y, direction, nightStrength);
   drawVehicleRainEffects(x, y, direction, true);
   if (direction === "left" || direction === "right") {
     drawSideScooter(x, y, direction, vehicle, time);
@@ -54,6 +58,33 @@ function drawAmbientScooter(x, y, direction, vehicle, time) {
   }
 
   drawVerticalScooter(x, y, direction, vehicle, time);
+}
+
+function drawScooterNightLights(x, y, direction, strength) {
+  if (strength <= 0.08) return;
+
+  if (direction === "left" || direction === "right") {
+    const forward = direction === "right" ? 1 : -1;
+    const headX = x + forward * 24;
+    const tailX = x - forward * 22;
+    ctx.fillStyle = `rgba(255, 231, 157, ${0.16 + strength * 0.22})`;
+    ctx.fillRect(headX + (forward > 0 ? 0 : -18), y + 7, 18, 4);
+    ctx.fillStyle = `rgba(255, 207, 103, ${0.055 + strength * 0.08})`;
+    ctx.fillRect(headX + (forward > 0 ? 5 : -29), y + 14, 24, 3);
+    ctx.fillStyle = `rgba(224, 66, 49, ${0.28 + strength * 0.3})`;
+    ctx.fillRect(tailX - 3, y + 3, 6, 5);
+    return;
+  }
+
+  const down = direction === "down";
+  const headY = y + (down ? 24 : -26);
+  const tailY = y + (down ? -23 : 21);
+  ctx.fillStyle = `rgba(255, 231, 157, ${0.16 + strength * 0.22})`;
+  ctx.fillRect(x - 7, headY, 14, 6);
+  ctx.fillStyle = `rgba(255, 207, 103, ${0.05 + strength * 0.07})`;
+  ctx.fillRect(x - 11, headY + (down ? 8 : -7), 22, 4);
+  ctx.fillStyle = `rgba(224, 66, 49, ${0.28 + strength * 0.3})`;
+  ctx.fillRect(x - 4, tailY, 8, 5);
 }
 
 function drawSideScooter(x, y, direction, vehicle, time) {

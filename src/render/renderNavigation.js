@@ -2,11 +2,13 @@ import { canvas, ctx, player, runtime, state } from "../state.js";
 import { worldToScreen } from "../camera.js";
 import { getResolvedObjective } from "../systems/navigation.js";
 import { isOverlayOpen } from "../systems/modal.js";
+import { getRouteGraph } from "../systems/routeGraph.js";
 
 const SAFE_MARGIN = 34;
 const TOP_SAFE_MARGIN = 54;
 
 export function drawNavigationGuidance() {
+  if (runtime.navigation?.debugGraph) drawDebugRouteGraph();
   if (!state.navigation?.showWorldGuidance || isOverlayOpen() || runtime.photoMode?.active) return;
   const target = getResolvedObjective();
   if (!target || target.unavailable || target.mapId !== state.currentMapId) return;
@@ -14,6 +16,18 @@ export function drawNavigationGuidance() {
   const inside = screen.x >= SAFE_MARGIN && screen.x <= canvas.width - SAFE_MARGIN && screen.y >= TOP_SAFE_MARGIN && screen.y <= canvas.height - SAFE_MARGIN;
   if (inside) drawWorldTargetMarker(screen.x, screen.y, target);
   else drawEdgeArrow(screen.x, screen.y, target);
+}
+
+function drawDebugRouteGraph() {
+  const graph = getRouteGraph(state.currentMapId, runtime.navigation?.routeMode || "walking");
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 225, 91, 0.62)";
+  graph.nodes.forEach((node) => {
+    const screen = worldToScreen(node.x, node.y);
+    if (screen.x < 0 || screen.x > canvas.width || screen.y < 0 || screen.y > canvas.height) return;
+    ctx.fillRect(Math.round(screen.x) - 1, Math.round(screen.y) - 1, 3, 3);
+  });
+  ctx.restore();
 }
 
 function drawWorldTargetMarker(x, y, target) {

@@ -18,6 +18,7 @@ let layerNodes = null;
 let initialized = false;
 let unlocked = false;
 let targetLayers = createSilentTargets();
+let cutsceneDuck = 1;
 
 export function initAudioManager() {
   if (initialized) return;
@@ -117,8 +118,147 @@ export function playTrainPassCue() {
   });
 }
 
+export function setCutsceneAudioDucking(level = 1, fadeSeconds = 0.35) {
+  cutsceneDuck = Math.max(0.08, Math.min(1, Number(level) || 1));
+  applyMasterVolumes(Math.max(0.03, Number(fadeSeconds) || 0.35));
+}
+
+export function playCutsceneHeartbeat() {
+  if (!unlocked || !settings.soundEnabled || !audioContext || !masterGain) return;
+  const now = audioContext.currentTime;
+  [0, 0.22].forEach((delay, index) => {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(index ? 58 : 64, now + delay);
+    oscillator.frequency.exponentialRampToValueAtTime(45, now + delay + 0.18);
+    gain.gain.setValueAtTime(0.0001, now + delay);
+    gain.gain.exponentialRampToValueAtTime(0.045 * settings.effectsVolume, now + delay + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.2);
+    oscillator.connect(gain).connect(masterGain);
+    oscillator.start(now + delay);
+    oscillator.stop(now + delay + 0.22);
+  });
+}
+
+export function playForeshadowBell() {
+  if (!unlocked || !settings.soundEnabled || !audioContext || !masterGain) return;
+  const now = audioContext.currentTime;
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(392, now);
+  oscillator.frequency.exponentialRampToValueAtTime(294, now + 0.72);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.012 * settings.effectsVolume, now + 0.025);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.78);
+  oscillator.connect(gain).connect(masterGain);
+  oscillator.start(now);
+  oscillator.stop(now + 0.82);
+}
+
+export function playPortalResonance() {
+  if (!unlocked || !settings.soundEnabled || !audioContext || !masterGain) return;
+  const now = audioContext.currentTime;
+  const gain = audioContext.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.038 * settings.effectsVolume, now + 0.08);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.25);
+  gain.connect(masterGain);
+
+  [54, 81, 126].forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = index === 2 ? "triangle" : "sine";
+    oscillator.frequency.setValueAtTime(frequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.16, now + 1.12);
+    oscillator.connect(gain);
+    oscillator.start(now + index * 0.035);
+    oscillator.stop(now + 1.28);
+  });
+}
+
+export function playIntroWindRise() {
+  if (!unlocked || !settings.soundEnabled || !audioContext || !masterGain) return;
+  const now = audioContext.currentTime;
+  const source = audioContext.createBufferSource();
+  const filter = audioContext.createBiquadFilter();
+  const gain = audioContext.createGain();
+  source.buffer = createNoiseBuffer(audioContext, 1.55);
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(620, now);
+  filter.frequency.exponentialRampToValueAtTime(1280, now + 1.35);
+  filter.Q.value = 0.46;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.026 * settings.effectsVolume, now + 0.42);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+  source.connect(filter).connect(gain).connect(masterGain);
+  source.start(now);
+  source.stop(now + 1.56);
+}
+
+export function playIntroDistantThunder() {
+  if (!unlocked || !settings.soundEnabled || !audioContext || !masterGain) return;
+  const now = audioContext.currentTime;
+  const rumbleGain = audioContext.createGain();
+  rumbleGain.gain.setValueAtTime(0.0001, now);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.032 * settings.effectsVolume, now + 0.12);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
+  rumbleGain.connect(masterGain);
+
+  [38, 51].forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = index ? "triangle" : "sine";
+    oscillator.frequency.setValueAtTime(frequency, now + index * 0.04);
+    oscillator.frequency.exponentialRampToValueAtTime(27 + index * 5, now + 0.96);
+    oscillator.connect(rumbleGain);
+    oscillator.start(now + index * 0.04);
+    oscillator.stop(now + 1.08);
+  });
+}
+
+export function playIntroLightningStrike() {
+  if (!unlocked || !settings.soundEnabled || !audioContext || !masterGain) return;
+  const now = audioContext.currentTime;
+  const crack = audioContext.createBufferSource();
+  const crackFilter = audioContext.createBiquadFilter();
+  const crackGain = audioContext.createGain();
+  crack.buffer = createNoiseBuffer(audioContext, 0.72);
+  crackFilter.type = "highpass";
+  crackFilter.frequency.value = 760;
+  crackGain.gain.setValueAtTime(0.0001, now);
+  crackGain.gain.linearRampToValueAtTime(0.13 * settings.effectsVolume, now + 0.006);
+  crackGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+  crack.connect(crackFilter).connect(crackGain).connect(masterGain);
+  crack.start(now);
+  crack.stop(now + 0.74);
+
+  const rumbleGain = audioContext.createGain();
+  rumbleGain.gain.setValueAtTime(0.0001, now + 0.03);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.075 * settings.effectsVolume, now + 0.08);
+  rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.18);
+  rumbleGain.connect(masterGain);
+  [34, 47, 69].forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = index === 2 ? "sawtooth" : "sine";
+    oscillator.frequency.setValueAtTime(frequency, now + index * 0.015);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(22, frequency * 0.55), now + 1.08);
+    oscillator.connect(rumbleGain);
+    oscillator.start(now + index * 0.015);
+    oscillator.stop(now + 1.2);
+  });
+}
+
 export function getAudioSettings() {
   return { ...settings };
+}
+
+export function getAudioRuntimeStateForDebug() {
+  return {
+    initialized,
+    unlocked,
+    cutsceneDuck,
+    contextState: audioContext?.state || null
+  };
 }
 
 export function updateAudioSetting(name, value) {
@@ -245,7 +385,7 @@ function applyTargets(fadeSeconds) {
 function applyMasterVolumes(fadeSeconds) {
   if (!audioContext || !masterGain || !ambienceGain) return;
   const now = audioContext.currentTime;
-  const masterTarget = settings.soundEnabled ? settings.masterVolume : 0;
+  const masterTarget = settings.soundEnabled ? settings.masterVolume * cutsceneDuck : 0;
   masterGain.gain.cancelScheduledValues(now);
   masterGain.gain.setValueAtTime(masterGain.gain.value, now);
   masterGain.gain.linearRampToValueAtTime(masterTarget, now + fadeSeconds);

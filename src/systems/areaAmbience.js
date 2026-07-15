@@ -71,6 +71,8 @@ export function getAreaNpcPresentation(mapId, x, y, id) {
     ambientRole: role,
     ambientRoleLabel: AMBIENT_ROLE_LABELS[role] || "Người đi bộ",
     movementSpeed: profile.pedestrianSpeed * (0.88 + stableFraction(`${id}:speed`) * 0.24),
+    visualBehavior: getNpcVisualBehavior(role, id),
+    idlePhase: stableFraction(`${id}:idle`) * 18,
     areaProfileId: profile.id
   };
 }
@@ -160,4 +162,22 @@ function stableFraction(value) {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0) / 4294967296;
+}
+
+function getNpcVisualBehavior(role, id) {
+  if (["jogger", "commuter", "bridgeWalker", "riversideWalker", "porter"].includes(role)) {
+    return "slowWalk";
+  }
+  if (["photographer", "reader", "student"].includes(role)) {
+    return stableFraction(`${id}:behavior`) < 0.58 ? "phone" : "lookAround";
+  }
+  if (["couple", "friendGroup", "cafeGuest", "parishioner", "guard", "guide", "vendor"].includes(role)) {
+    return "wait";
+  }
+
+  const roll = stableFraction(`${id}:behavior`);
+  if (roll < 0.34) return "slowWalk";
+  if (roll < 0.58) return "phone";
+  if (roll < 0.82) return "lookAround";
+  return "rest";
 }

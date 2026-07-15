@@ -47,6 +47,30 @@ export function updateNpcSchedules() {
 
 export function getScheduledNpcsForMap(map) {
   const scheduled = scheduledNpcsByMap[map.id] || [];
+  const storyMoActive = (
+    state.story?.currentScene === "chapter-1" &&
+    Number(state.story?.currentChapter) === 1 &&
+    !state.story?.flags?.chapter1?.completed
+  ) || (
+    state.story?.currentScene === "chapter-3" &&
+    Number(state.story?.currentChapter) === 3 &&
+    !state.story?.flags?.chapter3?.completed
+  ) || (
+    state.story?.currentScene === "chapter-4" &&
+    Number(state.story?.currentChapter) === 4 &&
+    !state.story?.flags?.chapter4?.completed
+  ) || (
+    state.story?.currentScene === "final-choice" &&
+    Boolean(state.story?.flags?.originRevealed) &&
+    Boolean(state.story?.flags?.chapter4?.portalOpen)
+  );
+  if (storyMoActive && runtime.scheduledMo && !isMoCompanionActive()) {
+    const withoutScheduledMo = scheduled.filter((npc) => npc.id !== MO_SCHEDULE.id);
+    if (runtime.scheduledMo.visible && runtime.scheduledMo.mapId === map.id) {
+      return [...withoutScheduledMo, runtime.scheduledMo];
+    }
+    return withoutScheduledMo;
+  }
   if (isMoCompanionActive()) {
     const companion = getMoCompanionNpc();
     if (companion && companion.visible && companion.mapId === map.id) {

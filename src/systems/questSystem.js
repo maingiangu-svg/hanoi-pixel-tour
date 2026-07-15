@@ -1,5 +1,9 @@
 import { runtime, state, ui } from "../state.js";
 import { areaQuests, sideQuests } from "../data/quests.js";
+import { CHAPTER_1_TITLE } from "../data/chapter1.js";
+import { CHAPTER_2_TITLE } from "../data/chapter2.js";
+import { CHAPTER_3_TITLE } from "../data/chapter3.js";
+import { CHAPTER_4_TITLE } from "../data/chapter4.js";
 import { maps } from "../data/maps.js";
 import { findLandmark, getCorrectQuizCount } from "../utils/helpers.js";
 import { formatMoney } from "../utils/format.js";
@@ -7,6 +11,10 @@ import { saveGame } from "../storage.js";
 import { closeChoiceModal, closePanelOverlays, openChoiceModal, showMessage } from "./modal.js";
 import { getActiveBranchingObjective, getActiveBranchingQuestEntries } from "./branchingQuest.js";
 import { setTrackedObjective, trackBranchingQuest } from "./navigation.js";
+import { getChapter1Objective, getChapter1QuestEntries, isChapter1Active } from "./chapter1.js";
+import { getChapter2Objective, getChapter2QuestEntries, isChapter2Active } from "./chapter2.js";
+import { getChapter3Objective, getChapter3QuestEntries, isChapter3Active } from "./chapter3.js";
+import { getChapter4Objective, getChapter4QuestEntries, isChapter4Active, isChapter4PortalWaiting } from "./chapter4.js";
 
 const TOUR_MAP_IDS = ["hoanKiem", "baDinh", "longBien"];
 let selectedTrackIndex = 0;
@@ -47,6 +55,27 @@ export function handleQuestLogKey(key) {
 
 export function renderQuestLog() {
   ui.questContent.innerHTML = "";
+
+  if (isChapter1Active()) {
+    renderChapter1QuestLog();
+    updateQuestTrackSelection();
+    return;
+  }
+  if (isChapter2Active()) {
+    renderChapter2QuestLog();
+    updateQuestTrackSelection();
+    return;
+  }
+  if (isChapter3Active()) {
+    renderChapter3QuestLog();
+    updateQuestTrackSelection();
+    return;
+  }
+  if (isChapter4Active()) {
+    renderChapter4QuestLog();
+    updateQuestTrackSelection();
+    return;
+  }
 
   const mainHeading = document.createElement("h3");
   mainHeading.className = "quest-heading";
@@ -131,6 +160,15 @@ export function getQuestObjectives() {
 }
 
 export function getCurrentObjective() {
+  if (isChapter4PortalWaiting()) return getChapter4Objective();
+  const storyObjective = isChapter1Active()
+    ? getChapter1Objective()
+    : isChapter2Active()
+      ? getChapter2Objective()
+      : isChapter3Active()
+        ? getChapter3Objective()
+        : isChapter4Active() ? getChapter4Objective() : null;
+  if (typeof storyObjective === "string" && storyObjective) return storyObjective;
   const branchingObjective = getActiveBranchingObjective();
   if (branchingObjective) {
     return branchingObjective;
@@ -209,6 +247,7 @@ function updateQuestTrackSelection() {
 }
 
 export function checkVictory() {
+  if (isChapter1Active() || isChapter2Active() || isChapter3Active() || isChapter4Active()) return;
   checkSideQuests();
 
   if (state.victoryShown) {
@@ -238,6 +277,50 @@ export function checkVictory() {
   }
 
   
+}
+
+function renderChapter1QuestLog() {
+  renderStoryChapterQuestLog(1, CHAPTER_1_TITLE, getChapter1QuestEntries());
+}
+
+function renderChapter2QuestLog() {
+  renderStoryChapterQuestLog(2, CHAPTER_2_TITLE, getChapter2QuestEntries());
+}
+
+function renderChapter3QuestLog() {
+  renderStoryChapterQuestLog(3, CHAPTER_3_TITLE, getChapter3QuestEntries());
+}
+
+function renderChapter4QuestLog() {
+  renderStoryChapterQuestLog(4, CHAPTER_4_TITLE, getChapter4QuestEntries());
+}
+
+function renderStoryChapterQuestLog(chapterNumber, chapterTitle, entries) {
+  const heading = document.createElement("h3");
+  heading.className = "quest-heading";
+  heading.textContent = `Chương ${chapterNumber} · ${chapterTitle}`;
+  ui.questContent.appendChild(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "side-quest-grid chapter-story-quest-grid";
+  entries.forEach((entry) => {
+    const card = document.createElement("article");
+    card.className = `side-quest-card ${entry.done ? "is-done" : entry.active ? "is-active" : "is-available"}`;
+    const title = document.createElement("h4");
+    title.textContent = entry.title;
+    const description = document.createElement("p");
+    description.className = "side-quest-description";
+    description.textContent = entry.description;
+    const progress = document.createElement("p");
+    progress.className = "side-quest-meta";
+    progress.textContent = entry.done ? "Hoàn thành" : entry.progress;
+    card.append(title, description, progress);
+    if (entry.navigation) {
+      card.appendChild(createTrackButton("Theo dõi", () => setTrackedObjective(entry.navigation)));
+    }
+    grid.appendChild(card);
+  });
+  ui.questContent.appendChild(grid);
 }
 
 export function checkAreaQuests(extraRewards = []) {

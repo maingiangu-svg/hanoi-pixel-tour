@@ -23,6 +23,7 @@ import {
 } from "../systems/npcReactions.js";
 import { drawNpcReactionOverlay } from "./renderNpcReactions.js";
 import { drawFemaleBikeDealershipPreview } from "./renderVehicle.js";
+import { drawNpcLocalLight } from "./renderNpcLighting.js";
 
 export function drawBackground(map) {
   const width = map.width || 1024;
@@ -616,6 +617,8 @@ export function drawNpcs(map) {
     const reaction = getNpcReactionVisual(npc);
     const renderPhase = reaction.pauseRoutine ? npc.id.length * 0.71 : phase;
     const visual = getNpcVisualPosition(npc, phase, reaction);
+    const visualActivity = getNpcVisualActivity(npc, reaction);
+    const visualFacing = reaction.facing || getNpcIdleFacing(npc, phase);
     const npcRect = { ...npc, x: visual.x - 46, y: visual.y - 8, width: 116, height: 58 };
     if (!isRectVisible(npcRect, 100)) {
       return;
@@ -641,13 +644,16 @@ export function drawNpcs(map) {
       drawDanceGroupNpc(visual.x, visual.y, renderPhase);
     } else {
       drawPixelNpc(visual.x, visual.y, npc.color, {
-        activity: reaction.pauseRoutine ? "idle" : npc.activity,
+        activity: visualActivity,
         phase: renderPhase,
-        facing: reaction.facing
+        facing: visualFacing
       });
       drawNpcAreaAccessory(npc, visual.x, visual.y, renderPhase);
     }
 
+    const lightX = npc.activity === "danceGroup" ? visual.x - 36 : npc.activity === "couple" ? visual.x - 20 : visual.x;
+    const lightWidth = npc.activity === "danceGroup" ? 92 : npc.activity === "couple" ? 60 : 24;
+    drawNpcLocalLight(map, lightX, visual.y, lightWidth);
     drawNpcRainGear(npc, visual.x, visual.y, phase);
     drawNpcReactionOverlay(npc, visual.x, visual.y);
 
@@ -674,7 +680,9 @@ function drawClosedShopShutter(shop) {
 
 function getNpcVisualPosition(npc, phase, reaction) {
   const movementPhase = phase * (npc.movementSpeed || 1);
-  if (!reaction.pauseRoutine && (npc.activity === "jog" || npc.activity === "walk")) {
+  const isStagedPedestrian = npc.densityRank !== undefined;
+  const shouldWalk = !isStagedPedestrian || npc.visualBehavior === "slowWalk";
+  if (!reaction.pauseRoutine && shouldWalk && (npc.activity === "jog" || npc.activity === "walk")) {
     const amplitude = npc.pathAmplitude || 24;
     return {
       x: npc.x + Math.round(Math.sin(movementPhase / 1.8) * amplitude) + reaction.offsetX,
@@ -690,6 +698,25 @@ function getNpcVisualPosition(npc, phase, reaction) {
   }
 
   return { x: npc.x + reaction.offsetX, y: npc.y + reaction.offsetY };
+}
+
+function getNpcVisualActivity(npc, reaction) {
+  if (reaction.pauseRoutine) return "idle";
+  if (npc.densityRank === undefined || npc.activity !== "walk") return npc.activity;
+  if (npc.visualBehavior === "phone") return "phone";
+  if (npc.visualBehavior === "lookAround") return "lookAround";
+  if (npc.visualBehavior === "rest") return "rest";
+  if (npc.visualBehavior === "wait") return "wait";
+  return "walk";
+}
+
+function getNpcIdleFacing(npc, phase) {
+  if (npc.densityRank === undefined || npc.visualBehavior === "slowWalk") return null;
+  const cycle = Math.floor((phase + (npc.idlePhase || 0)) / 8) % 5;
+  if (npc.visualBehavior === "phone") return cycle === 4 ? "left" : "down";
+  if (cycle === 1) return "left";
+  if (cycle === 3) return "right";
+  return "down";
 }
 
 function drawCoupleNpc(x, y, phase) {
@@ -708,24 +735,28 @@ function drawDanceGroupNpc(x, y, phase) {
   drawPixelNpc(x + 34, y + 2, "#8de097", { activity: "dance", phase: phase + 1.8 });
 }
 
-function drawPixelNpc(x, y, color, options = {}) {
+export function drawPixelNpc(x, y, color, options = {}) {
   const bounce = options.activity === "jog" ? Math.round(Math.sin(options.phase * 2) * 3) : 0;
   const armLift = options.activity === "dance" || options.activity === "exercise";
   const walk = options.activity === "jog" || options.activity === "walk";
   const legSwing = walk ? Math.round(Math.sin(options.phase * 2) * 3) : 0;
+  const seated = options.activity === "seated";
+  const idleCycle = Math.floor((options.phase || 0) / 8) % 6;
+  const idleShift = !walk && !armLift && idleCycle === 3 ? 1 : 0;
+  const scale = options.scale || 1.08;
 
-  drawGroundShadow(x + 10, y + 24, 34, 7);
+  drawGroundShadow(x + 10, y + (seated ? 28 : 24), seated ? 29 : 34, seated ? 6 : 7);
   const anchorX = x + 10;
   const anchorY = y + 46;
   ctx.save();
   ctx.translate(anchorX, anchorY);
-  ctx.scale(1.08, 1.08);
+  ctx.scale(scale, scale);
   ctx.translate(-anchorX, -anchorY);
 
   ctx.fillStyle = "#ffd0a6";
-  ctx.fillRect(x + 1, y + bounce, 18, 16);
+  ctx.fillRect(x + 1 + idleShift, y + bounce, 18, 16);
   ctx.fillStyle = "#4a2c25";
-  ctx.fillRect(x + 1, y + bounce, 18, 5);
+  ctx.fillRect(x + 1 + idleShift, y + bounce, 18, 5);
   ctx.fillStyle = color;
   ctx.fillRect(x - 2, y + 16 + bounce, 24, 18);
   ctx.fillStyle = "rgba(255,255,255,0.32)";
@@ -736,14 +767,24 @@ function drawPixelNpc(x, y, color, options = {}) {
     const lift = options.activity === "exercise" ? 12 : 8 + Math.round(Math.sin(options.phase * 2) * 4);
     ctx.fillRect(x - 8, y + 10 + bounce - lift, 6, 22);
     ctx.fillRect(x + 22, y + 10 + bounce - lift, 6, 22);
+  } else if (seated) {
+    ctx.fillRect(x - 5, y + 19 + bounce, 6, 13);
+    ctx.fillRect(x + 19, y + 19 + bounce, 6, 13);
   } else {
     ctx.fillRect(x - 7, y + 19 + bounce, 6, 16);
     ctx.fillRect(x + 21, y + 19 + bounce, 6, 16);
   }
 
   ctx.fillStyle = "#2b2b32";
-  ctx.fillRect(x + 2, y + 34 + bounce + legSwing, 7, 12);
-  ctx.fillRect(x + 13, y + 34 + bounce - legSwing, 7, 12);
+  if (seated) {
+    ctx.fillRect(x + 1, y + 32 + bounce, 10, 7);
+    ctx.fillRect(x + 12, y + 32 + bounce, 10, 7);
+    ctx.fillRect(x + 5, y + 38 + bounce, 7, 5);
+    ctx.fillRect(x + 15, y + 38 + bounce, 7, 5);
+  } else {
+    ctx.fillRect(x + 2, y + 34 + bounce + legSwing, 7, 12);
+    ctx.fillRect(x + 13, y + 34 + bounce - legSwing, 7, 12);
+  }
   ctx.fillStyle = "#151515";
   if (options.facing === "left") {
     ctx.fillRect(x + 3, y + 6 + bounce, 3, 3);
@@ -752,6 +793,15 @@ function drawPixelNpc(x, y, color, options = {}) {
   } else if (options.facing !== "up") {
     ctx.fillRect(x + 4, y + 6 + bounce, 3, 3);
     ctx.fillRect(x + 13, y + 6 + bounce, 3, 3);
+  }
+  if (options.activity === "phone") {
+    ctx.fillStyle = "#202b35";
+    ctx.fillRect(x + 21, y + 20 + bounce, 5, 8);
+    ctx.fillStyle = "#8fc7d2";
+    ctx.fillRect(x + 22, y + 21 + bounce, 3, 3);
+  } else if (options.activity === "talk" && idleCycle % 2 === 0) {
+    ctx.fillStyle = color;
+    ctx.fillRect(options.facing === "left" ? x - 8 : x + 22, y + 16 + bounce, 7, 5);
   }
   ctx.restore();
 }

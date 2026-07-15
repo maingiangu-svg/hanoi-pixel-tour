@@ -10,6 +10,7 @@ import { photoSpotsById } from "./data/photoSpots.js";
 import { BRANCHING_OUTCOMES, branchingQuests } from "./data/branchingQuests.js";
 import { RANDOM_EVENT_IDS, randomEventsById } from "./data/randomEvents.js";
 import { isOverlayOpen, showMessage } from "./systems/modal.js";
+import { normalizeStoryState } from "./data/storyState.js";
 
 let afterSaveHandler = () => {};
 export function setAfterSaveHandler(handler) { afterSaveHandler = handler; }
@@ -61,6 +62,7 @@ export function normalizeState(saved) {
     branchingQuestProgress: normalizeBranchingQuestProgress(saved.branchingQuestProgress),
     randomEvents: normalizeRandomEvents(saved.randomEvents),
     navigation: normalizeNavigation(saved.navigation, base.navigation),
+    story: normalizeStoryState(saved.story, saved, Object.keys(maps)),
     inventory: { ...base.inventory, ...(saved.inventory || {}) },
     completedQuizzes,
     completedTasks: { ...base.completedTasks, ...(saved.completedTasks || {}) },

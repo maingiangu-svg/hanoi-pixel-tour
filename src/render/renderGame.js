@@ -1,5 +1,5 @@
 import { canvas, ctx, player, runtime } from "../state.js";
-import { camera } from "../camera.js";
+import { applyWorldCameraTransform } from "../camera.js";
 import { getCurrentMap } from "../utils/helpers.js";
 import { drawBackground, drawBuildings, drawExits, drawGroundPatches, drawLandmarks, drawNpcs, drawShops, drawVehicleShops, drawWalkZones, drawWater } from "./renderMap.js";
 import { drawDecorations } from "./renderDecorations.js";
@@ -26,13 +26,29 @@ import { drawBranchingQuestActors } from "./renderBranchingQuests.js";
 import { drawRandomEvents } from "./renderRandomEvents.js";
 import { drawEnvironmentInteractionMarkers } from "./renderEnvironmentInteractions.js";
 import { drawNavigationGuidance } from "./renderNavigation.js";
+import { drawUrbanSurfaceDetails } from "./renderUrbanAmbience.js";
+import { drawNpcStaging } from "./renderNpcStaging.js";
+import { drawNightAmbientAccents } from "./renderNightAmbience.js";
+import { drawCutsceneOverlay } from "./renderCutscene.js";
+import { drawImmortalIntroScene } from "./renderImmortalIntro.js";
+import { drawHanoiArrivalScene, isHanoiArrivalSceneActive } from "./renderHanoiArrival.js";
+import { drawChapter1Story } from "./renderChapter1.js";
+import { drawChapter2CutsceneBackdrop, drawChapter2CutsceneForeground, drawChapter2Story } from "./renderChapter2.js";
+import { drawChapter3CutsceneBackdrop, drawChapter3Story } from "./renderChapter3.js";
+import { drawChapter4CutsceneBackdrop, drawChapter4Story } from "./renderChapter4.js";
+import { drawFinalEndingBackdrop } from "./renderFinalEnding.js";
 
 export function drawGame() {
-  const map = getCurrentMap();
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (drawImmortalIntroScene()) {
+    drawCutsceneOverlay();
+    return;
+  }
+
+  const map = getCurrentMap();
+  const hanoiArrivalActive = isHanoiArrivalSceneActive();
   ctx.save();
-  ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
+  applyWorldCameraTransform(ctx);
   drawWorldBase(map);
   ctx.restore();
 
@@ -40,31 +56,49 @@ export function drawGame() {
   drawWeatherAtmosphere(map);
 
   ctx.save();
-  ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
+  applyWorldCameraTransform(ctx);
   drawWorldLightAccents(map);
+  drawNightAmbientAccents(map);
   drawWetReflections(map);
-  drawAreaVisualAmbience(map);
-  drawPhotoSpots(map);
-  if (map.kind !== "churchInterior") {
-    drawAmbientVehicles(map);
-    drawNpcs(map);
+  if (hanoiArrivalActive) {
+    drawHanoiArrivalScene();
+  } else {
+    drawAreaVisualAmbience(map);
+    drawPhotoSpots(map);
+    if (map.kind !== "churchInterior") {
+      drawAmbientVehicles(map);
+      drawNpcs(map);
+      drawNpcStaging(map);
+    }
+    drawBranchingQuestActors(map);
+    drawChapter1Story(map);
+    drawChapter2Story(map);
+    drawChapter3Story(map);
+    drawChapter4Story(map);
+    drawRandomEvents(map);
+    drawEnvironmentInteractionMarkers(map);
+    if (!runtime.photoMode?.active && !runtime.cutscene?.active) {
+      drawInteractionPoints(map);
+    }
+    drawScheduledNpcs(map);
+    drawInteractionHighlight();
+    drawPlayerWeatherEffects(isRidingVehicle());
+    drawPlayer();
+    drawVehicleHornIndicator();
   }
-  drawBranchingQuestActors(map);
-  drawRandomEvents(map);
-  drawEnvironmentInteractionMarkers(map);
-  if (!runtime.photoMode?.active) {
-    drawInteractionPoints(map);
-  }
-  drawScheduledNpcs(map);
-  drawInteractionHighlight();
-  drawPlayerWeatherEffects(isRidingVehicle());
-  drawPlayer();
-  drawVehicleHornIndicator();
   ctx.restore();
   drawRainOverlay(map);
-  drawNavigationGuidance();
-  drawPhotoModeOverlay();
+  if (!runtime.cutscene?.active) {
+    drawNavigationGuidance();
+    drawPhotoModeOverlay();
+  }
   drawMapTransition();
+  drawChapter2CutsceneBackdrop();
+  drawChapter3CutsceneBackdrop();
+  drawChapter4CutsceneBackdrop();
+  drawFinalEndingBackdrop();
+  drawCutsceneOverlay();
+  drawChapter2CutsceneForeground();
 }
 
 function drawWorldBase(map) {
@@ -76,6 +110,7 @@ function drawWorldBase(map) {
     drawGroundPatches(map);
     drawWater(map);
     drawWalkZones(map);
+    drawUrbanSurfaceDetails(map);
     drawWetSurfaceEffects(map);
     drawDecorations(map, "behind");
     drawBuildings(map);

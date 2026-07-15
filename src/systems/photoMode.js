@@ -157,7 +157,8 @@ export function captureCurrentPhoto() {
     return true;
   }
 
-  if (previous && photo.rating === previous.rating && (!photo.eventId || previous.eventId === photo.eventId)) {
+  const upgradesCompanionMemory = Boolean(previous && photo.withMo && !previous.withMo);
+  if (previous && photo.rating === previous.rating && !upgradesCompanionMemory && (!photo.eventId || previous.eventId === photo.eventId)) {
     showMessage(`Ảnh cũ đã đạt mức ${getPhotoRatingLabel(previous.rating)} nên được giữ lại.`);
     return true;
   }

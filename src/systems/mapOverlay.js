@@ -17,6 +17,16 @@ import {
   setTrackedObjective,
   toggleWorldGuidance
 } from "./navigation.js";
+import {
+  getChapter1AreaStatuses,
+  getChapter1NavigationObjective,
+  isChapter1Active,
+  notifyChapter1MapOpened
+} from "./chapter1.js";
+import { getChapter2NavigationObjective, isChapter2Active } from "./chapter2.js";
+import { getChapter3NavigationObjective, isChapter3Active } from "./chapter3.js";
+import { getChapter4NavigationObjective, isChapter4Active } from "./chapter4.js";
+import { isStoryTargetUnlocked } from "./storyState.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MAP_WIDTH = 680;
@@ -38,6 +48,7 @@ export function toggleMapOverlay() {
 export function openMapOverlay() {
   closePanelOverlays("map");
   selectedTargetIndex = 0;
+  notifyChapter1MapOpened();
   renderMapOverlay();
   ui.mapPanel.classList.remove("hidden");
   ui.nearbyHint.classList.add("hidden");
@@ -93,6 +104,7 @@ export function renderMapOverlay() {
   side.className = "map-side";
   side.append(createMapStat("Khu vực", map.name));
   side.append(createMapStat("Thời tiết", getWeatherLabel()));
+  if (state.story?.flags?.chapter1) side.append(createStoryAreaPanel());
   side.append(createNavigationPanel());
   side.append(createTargetList(targets));
   side.append(createLegend());
@@ -111,7 +123,10 @@ function createMapSvg(map, data) {
     addMapLabel(svg, water.label, water.x + water.width / 2, water.y + water.height / 2, transform, "map-label map-label-water");
   });
   drawNavigationRoute(svg, transform, map.id);
-  data.exits.forEach((exit) => addMarker(svg, exit.x, exit.y, transform, "map-marker map-marker-exit", "◆", exit.name));
+  data.exits.forEach((exit) => {
+    const unlocked = isStoryTargetUnlocked({ ...exit, targetId: exit.id });
+    addMarker(svg, exit.x, exit.y, transform, `map-marker map-marker-exit ${unlocked ? "" : "is-locked"}`, unlocked ? "◆" : "×", unlocked ? exit.name : "Chưa khám phá");
+  });
   data.shops.forEach((shop) => addMarker(svg, shop.x, shop.y, transform, "map-marker map-marker-shop", "■", shop.name));
   data.vehicleShops.forEach((shop) => addMarker(svg, shop.x, shop.y, transform, "map-marker map-marker-vehicle", "▣", "VinFast"));
   data.parkingSpots.forEach((spot) => addMarker(svg, spot.x, spot.y, transform, "map-marker map-marker-parking", "P", spot.name));
@@ -124,9 +139,18 @@ function createMapSvg(map, data) {
     addMarker(svg, spot.x, spot.y, transform, `map-marker map-marker-photo ${captured ? "is-captured" : "is-known"}`, captured ? "✓" : "▣", captured ? spot.name : "Điểm chụp ảnh");
   });
   data.landmarks.forEach((landmark) => {
+    const unlocked = isStoryTargetUnlocked({ type: "landmark", mapId: map.id, targetId: landmark.id });
     const discovered = isLandmarkCheckedIn(landmark);
     const seen = state.discoveredLandmarks.includes(landmark.id);
-    addMarker(svg, landmark.x, landmark.y, transform, `map-marker map-marker-landmark ${discovered ? "is-discovered" : seen ? "is-seen" : "is-new"}`, discovered ? "★" : "◇", landmark.name);
+    addMarker(
+      svg,
+      landmark.x,
+      landmark.y,
+      transform,
+      `map-marker map-marker-landmark ${unlocked ? (discovered ? "is-discovered" : seen ? "is-seen" : "is-new") : "is-locked"}`,
+      unlocked ? (discovered ? "★" : "◇") : "×",
+      unlocked ? landmark.name : "Chưa khám phá"
+    );
   });
   const resolved = getResolvedObjective();
   if (resolved && !resolved.unavailable && resolved.mapId === map.id) {
@@ -181,8 +205,9 @@ function createTargetList(targets) {
   targets.forEach((target, index) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `map-target ${index === selectedTargetIndex ? "is-selected" : ""}`;
+    button.className = `map-target ${index === selectedTargetIndex ? "is-selected" : ""} ${target.locked ? "is-locked" : ""}`;
     button.textContent = target.label;
+    button.disabled = Boolean(target.locked);
     button.addEventListener("click", () => {
       selectedTargetIndex = index;
       activateMapTarget(target);
@@ -194,12 +219,30 @@ function createTargetList(targets) {
 
 function getMapTargets(map, data) {
   const targets = [];
+  const chapterObjective = isChapter1Active()
+    ? getChapter1NavigationObjective()
+    : isChapter2Active()
+      ? getChapter2NavigationObjective()
+      : isChapter3Active()
+        ? getChapter3NavigationObjective()
+        : isChapter4Active() ? getChapter4NavigationObjective() : null;
+  if (chapterObjective) targets.push(chapterObjective);
   if (state.moCompanion?.active && data.companionReturnPoint) {
     targets.push({ id: "map-return-mo", type: "returnPoint", mapId: map.id, targetId: data.companionReturnPoint.id, label: "Đưa Mơ về Nhà thờ", description: "Thời gian tiếp tục khi Mơ về Nhà thờ." });
   }
-  data.landmarks.forEach((item) => targets.push({ id: `map-landmark-${item.id}`, type: "landmark", mapId: map.id, targetId: item.id, label: item.name }));
+  data.landmarks.forEach((item) => {
+    const target = { id: `map-landmark-${item.id}`, type: "landmark", mapId: map.id, targetId: item.id, label: item.name };
+    target.locked = !isStoryTargetUnlocked(target);
+    if (target.locked) target.label = `${item.name} · Chưa khám phá`;
+    targets.push(target);
+  });
   data.parkingSpots.forEach((item) => targets.push({ id: `map-parking-${item.id}`, type: "parking", mapId: map.id, targetId: item.id, label: item.name }));
-  data.exits.forEach((item) => targets.push({ id: `map-exit-${item.id}`, type: item.kind === "bus" ? "busStop" : "exit", mapId: map.id, targetId: item.id, label: `${item.name} → ${maps[item.targetMap]?.name || item.targetMap}` }));
+  data.exits.forEach((item) => {
+    const target = { id: `map-exit-${item.id}`, type: item.kind === "bus" ? "busStop" : "exit", mapId: map.id, targetMap: item.targetMap, targetId: item.id, label: `${item.name} → ${maps[item.targetMap]?.name || item.targetMap}` };
+    target.locked = !isStoryTargetUnlocked(target);
+    if (target.locked) target.label = `${maps[item.targetMap]?.name || item.name} · Chưa khám phá`;
+    targets.push(target);
+  });
   data.shops.forEach((item) => targets.push({ id: `map-shop-${item.id}`, type: "shop", mapId: map.id, targetId: item.id, label: item.name }));
   data.vehicleShops.forEach((item) => targets.push({ id: `map-vehicle-${item.id}`, type: "vehicleShop", mapId: map.id, targetId: item.id, label: item.name }));
   data.photoSpots.filter((spot) => isPhotoSpotKnown(spot.id) && !hasCapturedPhotoSpot(spot.id)).forEach((spot) => targets.push({ id: `map-photo-${spot.id}`, type: "photoSpot", mapId: map.id, targetId: spot.id, label: `Ảnh: ${spot.name}` }));
@@ -209,9 +252,29 @@ function getMapTargets(map, data) {
 
 function activateMapTarget(target) {
   if (!target) return;
+  if (target.locked || !isStoryTargetUnlocked(target)) return;
   const routeMode = getTrackedObjective()?.routeMode || "auto";
   setTrackedObjective({ ...target, routeMode });
   renderMapOverlay();
+}
+
+function createStoryAreaPanel() {
+  const block = document.createElement("section");
+  block.className = "map-story-areas";
+  const title = document.createElement("h3");
+  title.textContent = "Khu vực cốt truyện";
+  block.appendChild(title);
+  getChapter1AreaStatuses().forEach((area) => {
+    const row = document.createElement("p");
+    row.className = area.unlocked ? "is-unlocked" : "is-locked";
+    const label = document.createElement("span");
+    label.textContent = area.label;
+    const status = document.createElement("strong");
+    status.textContent = area.unlocked ? "Đã mở" : "Chưa khám phá";
+    row.append(label, status);
+    block.appendChild(row);
+  });
+  return block;
 }
 
 function cycleRouteMode(delta) {

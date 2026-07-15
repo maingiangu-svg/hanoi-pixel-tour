@@ -12,7 +12,8 @@ import { getScheduledNpcsForMap } from "./npcSchedule.js";
 import { getActiveEventsForMap } from "./randomEvents.js";
 import { findRoute, showRouteGraphForDebug, validateRouteGraphForDebug } from "./routeGraph.js";
 import { isRidingVehicle, isWalkingBike } from "./vehicle.js";
-import { getActiveMapNpcs } from "./worldSchedule.js";
+import { getActiveMapNpcs, getNpcNextAvailableText } from "./worldSchedule.js";
+import { isStoryTargetUnlocked } from "./storyState.js";
 
 const ROUTE_MODES = ["auto", "walking", "vehicle"];
 const MO_RETURN_OBJECTIVE = Object.freeze({
@@ -42,6 +43,10 @@ export function initNavigation() {
 
 export function setTrackedObjective(objective, { silent = false } = {}) {
   if (!isObjectiveTrackable(objective)) return false;
+  if (!isStoryTargetUnlocked(objective)) {
+    if (!silent) showNavigationNotice("Khu vực này chưa được khám phá.");
+    return false;
+  }
   ensureNavigationState();
   state.navigation.trackedObjective = normalizeObjective(objective);
   runtime.navigation.routeKey = "";
@@ -97,6 +102,17 @@ export function updateTrackedObjective({ force = false } = {}) {
     return false;
   }
 
+  if (!isStoryTargetUnlocked(tracked)) {
+    runtime.navigation.resolvedObjective = {
+      ...tracked,
+      unavailable: true,
+      stage: "unavailable",
+      statusText: "Khu vực này chưa được khám phá."
+    };
+    runtime.navigation.route = [];
+    return false;
+  }
+
   if (shouldAutoComplete(tracked)) {
     clearTrackedObjective({ force: !isMoCompanionActive(), silent: true });
     return true;
@@ -117,6 +133,7 @@ export function resolveObjectivePosition(objective = getTrackedObjective()) {
   if (!finalTarget) {
     return { ...objective, unavailable: true, stage: "unavailable", statusText: "Điểm đến hiện chưa xuất hiện." };
   }
+  if (finalTarget.unavailable) return finalTarget;
 
   if (state.currentMapId !== finalTarget.mapId) {
     const transit = resolveTransitStep(state.currentMapId, finalTarget.mapId);
@@ -217,7 +234,16 @@ function recalculateRoute(tracked, resolved) {
   const mode = resolveRouteMode(tracked.routeMode, resolved);
   const start = getPlayerCenter();
   runtime.navigation.currentRouteMapId = state.currentMapId;
-  const routeKey = [state.currentMapId, mode, Math.round(start.x / 96), Math.round(start.y / 96), Math.round(resolved.x / 48), Math.round(resolved.y / 48), resolved.stage, runtime.eventCollisionBlocks?.length || 0].join(":");
+  const routeKey = [
+    state.currentMapId,
+    mode,
+    Math.round(start.x / 96),
+    Math.round(start.y / 96),
+    Math.round(resolved.x / 48),
+    Math.round(resolved.y / 48),
+    resolved.stage,
+    getEventBlockSignature()
+  ].join(":");
   if (routeKey === runtime.navigation.routeKey) return;
   runtime.navigation.routeKey = routeKey;
   runtime.navigation.routeMode = mode;
@@ -312,11 +338,22 @@ function resolveNpcTarget(objective) {
     const companion = isMoCompanionActive() ? state.moCompanion : state.npcSchedules?.mo;
     if (companion?.currentMap) return createResolved(objective, companion.currentMap, companion.x, companion.y, "Mơ");
   }
+  let scheduledFallback = null;
   for (const map of Object.values(maps)) {
     const activeNpc = getActiveMapNpcs(map).find((npc) => npc.id === objective.targetId && npc.visible !== false);
     if (activeNpc) return createResolved(objective, map.id, activeNpc.x + 12, activeNpc.y + 34, activeNpc.name);
     const scheduled = getScheduledNpcsForMap(map).find((npc) => npc.id === objective.targetId && npc.visible !== false);
     if (scheduled) return createResolved(objective, map.id, scheduled.x + 12, scheduled.y + 34, scheduled.name);
+    const configured = (map.npcs || []).find((npc) => npc.id === objective.targetId);
+    if (configured) scheduledFallback = { map, npc: configured };
+  }
+  if (scheduledFallback) {
+    return {
+      ...createResolved(objective, scheduledFallback.map.id, scheduledFallback.npc.x, scheduledFallback.npc.y, scheduledFallback.npc.name),
+      unavailable: true,
+      stage: "unavailable",
+      statusText: getNpcNextAvailableText(scheduledFallback.npc)
+    };
   }
   return null;
 }
@@ -342,6 +379,7 @@ function findNextMapHop(startMapId, targetMapId) {
   while (queue.length) {
     const current = queue.shift();
     for (const exit of maps[current.mapId]?.exits || []) {
+      if (!isStoryTargetUnlocked({ ...exit, targetId: exit.id })) continue;
       if (visited.has(exit.targetMap)) continue;
       const firstHop = current.firstHop || exit.targetMap;
       if (exit.targetMap === targetMapId) return firstHop;
@@ -381,6 +419,7 @@ function shouldAutoComplete(tracked) {
     return !progress || ["completed", "failed"].includes(progress.status);
   }
   if (tracked.type === "returnPoint" && !isMoCompanionActive()) return true;
+  if (tracked.type === "map" && tracked.mapId === state.currentMapId) return true;
   return false;
 }
 
@@ -393,8 +432,15 @@ function createFingerprint(tracked, resolved) {
     tracked.id, tracked.routeMode, state.currentMapId, state.vehicle?.status,
     resolved?.mapId, resolved?.stage, Math.round((resolved?.x || 0) / 24), Math.round((resolved?.y || 0) / 24),
     tracked.questId ? state.branchingQuestProgress?.[tracked.questId]?.currentNodeId : "",
-    Math.floor(Number(state.gameTime.totalGameMinutes) || 0), runtime.eventCollisionBlocks?.length || 0
+    getEventBlockSignature()
   ].join("|");
+}
+
+function getEventBlockSignature() {
+  return (runtime.eventCollisionBlocks || [])
+    .filter((block) => !block.mapId || block.mapId === state.currentMapId)
+    .map((block) => [block.id || "block", Math.round(block.x / 48), Math.round(block.y / 48), Math.round((block.width || 0) / 48), Math.round((block.height || 0) / 48)].join(","))
+    .join(";");
 }
 
 function normalizeObjective(objective) {

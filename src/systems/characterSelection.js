@@ -1,6 +1,7 @@
 import { runtime, state, ui } from "../state.js";
 import { saveGame } from "../storage.js";
 import { showMessage } from "./modal.js";
+import { startImmortalIntro } from "./immortalIntro.js";
 
 const GENDERS = ["male", "female"];
 const GENDER_LABELS = {
@@ -77,9 +78,12 @@ export function selectCharacter(index) {
 export function confirmCharacterSelection() {
   const gender = GENDERS[runtime.characterSelectedIndex] || "male";
   const previousGender = state.profile && state.profile.gender;
+  const shouldStartIntro = !state.story?.introCompleted && (runtime.characterSelection.firstTime || !previousGender);
   state.profile = { ...(state.profile || {}), gender };
   ui.characterModal.classList.add("hidden");
   saveGame();
+
+  if (shouldStartIntro && startImmortalIntro()) return;
 
   const label = GENDER_LABELS[gender];
   if (runtime.characterSelection.firstTime || !previousGender) {

@@ -40,6 +40,29 @@ import {
   showActiveEnvironmentHint
 } from "./environmentInteraction.js";
 import { completeTrackedObjective } from "./navigation.js";
+import { isStoryMapUnlocked, isStoryTargetUnlocked } from "./storyState.js";
+import {
+  getChapter1Interactables,
+  handleChapter1Interaction,
+  handleChapter1MoInteraction,
+  isChapter1LandmarkUnlocked
+} from "./chapter1.js";
+import {
+  getChapter2Interactables,
+  getChapter2MoDialogue,
+  handleChapter2Interaction,
+  handleChapter2MoInteraction
+} from "./chapter2.js";
+import {
+  getChapter3Interactables,
+  handleChapter3Interaction,
+  handleChapter3MoInteraction
+} from "./chapter3.js";
+import {
+  getChapter4Interactables,
+  handleChapter4Interaction,
+  handleChapter4MoInteraction
+} from "./chapter4.js";
 
 export function updateNearbyInteractable() {
   if (isEnvironmentInteractionActive()) {
@@ -109,6 +132,10 @@ export function getInteractables() {
       priority: 0,
       range: moReturnPoint.radius
     }] : []),
+    ...getChapter1Interactables(map.id),
+    ...getChapter2Interactables(map.id),
+    ...getChapter3Interactables(map.id),
+    ...getChapter4Interactables(map.id),
     ...map.exits.map((object) => {
       const point = exitPoints.find((candidate) => candidate.exit === object);
       return {
@@ -208,6 +235,9 @@ export function getInteractionPrompt(item) {
   }
 
   if (item.type === "exit") {
+    if (!isStoryTargetUnlocked({ ...item.object, targetId: item.object.id })) {
+      return "Chưa khám phá";
+    }
     if (item.object.prompt) {
       return item.object.prompt;
     }
@@ -224,6 +254,22 @@ export function getInteractionPrompt(item) {
 
   if (item.type === "branchingQuest") {
     return `E · ${item.object.kind === "item" || item.object.kind === "clue" ? "Kiểm tra" : `Nói chuyện với ${item.object.name}`}`;
+  }
+
+  if (item.type === "chapter1") {
+    return `E · ${item.source.label}`;
+  }
+
+  if (item.type === "chapter2") {
+    return `E · ${item.source.label}`;
+  }
+
+  if (item.type === "chapter3") {
+    return `E · ${item.source.label}`;
+  }
+
+  if (item.type === "chapter4") {
+    return `E · ${item.source.label}`;
   }
 
   if (item.type === "randomEvent") {
@@ -266,58 +312,81 @@ export function interact() {
     return;
   }
 
-  const ridingEnvironmentType = runtime.nearbyInteractable.type === "environment"
-    ? runtime.nearbyInteractable.source?.type
+  const interactable = runtime.nearbyInteractable;
+  const ridingEnvironmentType = interactable.type === "environment"
+    ? interactable.source?.type
     : null;
-  if (isRidingVehicle() && !["exit", "parking"].includes(runtime.nearbyInteractable.type) && ridingEnvironmentType !== "vehicleWalkZone") {
+  if (isRidingVehicle() && !["exit", "parking"].includes(interactable.type) && ridingEnvironmentType !== "vehicleWalkZone") {
     showMessage("Nhấn V để xuống xe trước khi tương tác.");
     return;
   }
 
-  if (runtime.nearbyInteractable.type === "exit") {
-    travelToMap(runtime.nearbyInteractable.object);
-  }
-
-  if (runtime.nearbyInteractable.type === "shop") {
-    openShop(runtime.nearbyInteractable.source);
-  }
-
-  if (runtime.nearbyInteractable.type === "vehicleShop") {
-    openVehicleShop(runtime.nearbyInteractable.source);
-  }
-
-  if (runtime.nearbyInteractable.type === "parking") {
-    openParkingMenu(runtime.nearbyInteractable.source);
-  }
-
-  if (runtime.nearbyInteractable.type === "environment") {
-    handleEnvironmentInteractable(runtime.nearbyInteractable.source);
-    completeTrackedObjective("environmentInteraction", runtime.nearbyInteractable.source.id);
+  if (interactable.type === "exit") {
+    const travelled = travelToMap(interactable.object);
+    if (travelled) completeTrackedObjective(interactable.object.kind === "bus" ? "busStop" : "exit", interactable.object.id);
     return;
   }
 
-  if (runtime.nearbyInteractable.type === "moReturn") {
+  if (interactable.type === "shop") {
+    openShop(interactable.source);
+  }
+
+  if (interactable.type === "vehicleShop") {
+    openVehicleShop(interactable.source);
+  }
+
+  if (interactable.type === "parking") {
+    openParkingMenu(interactable.source);
+  }
+
+  if (interactable.type === "environment") {
+    handleEnvironmentInteractable(interactable.source);
+    completeTrackedObjective("environmentInteraction", interactable.source.id);
+    return;
+  }
+
+  if (interactable.type === "chapter1") {
+    handleChapter1Interaction(interactable.source);
+    return;
+  }
+
+  if (interactable.type === "chapter2") {
+    handleChapter2Interaction(interactable.source);
+    return;
+  }
+
+  if (interactable.type === "chapter3") {
+    handleChapter3Interaction(interactable.source);
+    return;
+  }
+
+  if (interactable.type === "chapter4") {
+    handleChapter4Interaction(interactable.source);
+    return;
+  }
+
+  if (interactable.type === "moReturn") {
     openMoReturnConfirmation();
   }
 
-  if (runtime.nearbyInteractable.type === "npc") {
-    handleNpc(runtime.nearbyInteractable.source);
+  if (interactable.type === "npc") {
+    handleNpc(interactable.source);
   }
 
-  if (runtime.nearbyInteractable.type === "scheduledNpc") {
-    handleScheduledNpc(runtime.nearbyInteractable.source);
+  if (interactable.type === "scheduledNpc") {
+    handleScheduledNpc(interactable.source);
   }
 
-  if (runtime.nearbyInteractable.type === "branchingQuest") {
-    handleBranchingQuestActor(runtime.nearbyInteractable.source);
+  if (interactable.type === "branchingQuest") {
+    handleBranchingQuestActor(interactable.source);
   }
 
-  if (runtime.nearbyInteractable.type === "randomEvent") {
-    handleRandomEventInteraction(runtime.nearbyInteractable.source);
+  if (interactable.type === "randomEvent") {
+    handleRandomEventInteraction(interactable.source);
   }
 
-  if (runtime.nearbyInteractable.type === "landmark") {
-    handleLandmark(runtime.nearbyInteractable.source || runtime.nearbyInteractable.object);
+  if (interactable.type === "landmark") {
+    handleLandmark(interactable.source || interactable.object);
   }
 
   const navigationTypes = {
@@ -329,17 +398,21 @@ export function interact() {
     scheduledNpc: "npc",
     randomEvent: "event"
   };
-  const navigationType = navigationTypes[runtime.nearbyInteractable.type];
+  const navigationType = navigationTypes[interactable.type];
   if (navigationType) {
-    completeTrackedObjective(navigationType, runtime.nearbyInteractable.source?.id || runtime.nearbyInteractable.object?.id);
+    completeTrackedObjective(navigationType, interactable.source?.id || interactable.object?.id);
   }
 }
 
 export function travelToMap(exit) {
+  if (!isStoryMapUnlocked(exit.targetMap)) {
+    showMessage("Khu vực này chưa mở trong chương hiện tại.");
+    return false;
+  }
   const travelCheck = canChangeMapWithQuestFollowers(exit.targetMap);
   if (!travelCheck.allowed) {
     showMessage(travelCheck.message);
-    return;
+    return false;
   }
   const travelMethod = exit.kind === "bus" ? "bus" : (isRidingVehicle() ? "vinfast" : "walk");
   endEnvironmentInteraction({ restore: true, silent: true });
@@ -357,7 +430,7 @@ export function travelToMap(exit) {
     } else {
       showMessage("Bạn cần 7.000đ để mua vé xe buýt. Hãy làm nhiệm vụ hoặc trả lời câu hỏi để kiếm thêm VND.");
       saveGame();
-      return;
+      return false;
     }
   }
 
@@ -380,9 +453,14 @@ export function travelToMap(exit) {
   notifyBranchingQuestMapTransition(exit.targetMap, travelMethod);
   saveGame();
   checkVictory();
+  return true;
 }
 
 export function handleLandmark(landmark) {
+  if (!isChapter1LandmarkUnlocked(landmark.id)) {
+    showMessage("Nhà thờ Lớn: Chưa khám phá. Hãy hoàn thành Chương 1 cùng Mơ.");
+    return;
+  }
   discoverLandmark(landmark.id);
 
   if (landmark.id === "choDongXuan" && state.taskStages.deliveryDongXuan === "accepted" && !state.completedTasks.deliveryDongXuan) {
@@ -590,6 +668,18 @@ export function handleScheduledNpc(npc) {
 }
 
 function handleMoInteraction(npc) {
+  if (handleChapter1MoInteraction(npc)) {
+    return;
+  }
+  if (handleChapter2MoInteraction(npc)) {
+    return;
+  }
+  if (handleChapter3MoInteraction(npc)) {
+    return;
+  }
+  if (handleChapter4MoInteraction(npc)) {
+    return;
+  }
   if (handleMoQuestInteraction(npc)) {
     return;
   }
@@ -603,7 +693,7 @@ function handleMoInteraction(npc) {
     return;
   }
 
-  const dialogue = getScheduledNpcDialogue(npc);
+  const dialogue = getChapter2MoDialogue(npc) || getScheduledNpcDialogue(npc);
   openChoiceModal({
     tag: "Mơ",
     title: "Mơ",

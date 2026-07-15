@@ -81,6 +81,7 @@ export function closePanelOverlays(keep = "") {
   if (keep !== "journal") ui.journalPanel.classList.add("hidden");
   if (keep !== "map" && ui.mapPanel) ui.mapPanel.classList.add("hidden");
   if (keep !== "settings" && ui.settingsPanel) ui.settingsPanel.classList.add("hidden");
+  if (keep !== "ending" && ui.endingPanel) ui.endingPanel.classList.add("hidden");
   closeChoiceModal();
 }
 
@@ -90,6 +91,7 @@ export function closeAllOverlays() {
   ui.journalPanel.classList.add("hidden");
   if (ui.mapPanel) ui.mapPanel.classList.add("hidden");
   if (ui.settingsPanel) ui.settingsPanel.classList.add("hidden");
+  if (ui.endingPanel) ui.endingPanel.classList.add("hidden");
   closeChoiceModal();
   if (!ui.infoModal.classList.contains("hidden")) closeInfoModal();
 }
@@ -239,11 +241,13 @@ export function closeInfoModal() {
 }
 
 export function isOverlayOpen() {
-  return !ui.inventoryPanel.classList.contains("hidden") ||
+  return Boolean(runtime.cutscene?.active) ||
+    !ui.inventoryPanel.classList.contains("hidden") ||
     !ui.questPanel.classList.contains("hidden") ||
     !ui.journalPanel.classList.contains("hidden") ||
     (ui.mapPanel && !ui.mapPanel.classList.contains("hidden")) ||
     (ui.settingsPanel && !ui.settingsPanel.classList.contains("hidden")) ||
+    (ui.endingPanel && !ui.endingPanel.classList.contains("hidden")) ||
     !ui.infoModal.classList.contains("hidden") ||
     !ui.quizModal.classList.contains("hidden") ||
     !ui.choiceModal.classList.contains("hidden") ||

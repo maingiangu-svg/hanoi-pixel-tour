@@ -25,22 +25,40 @@ import { hydrateRandomEvents, initRandomEvents, updateRandomEvents } from "./sys
 import { updateVehicleTransition } from "./systems/vehicle.js";
 import { hydrateEnvironmentInteraction, updateEnvironmentInteraction } from "./systems/environmentInteraction.js";
 import { initNavigation, updateTrackedObjective } from "./systems/navigation.js";
+import { initCutsceneController, isCutsceneActive, resumeCutsceneFromStoryCheckpoint, updateCutscene } from "./systems/cutscene.js";
+import { resumeStoryFromSave } from "./systems/storyState.js";
+import { initImmortalIntro, resumeImmortalIntroFlow } from "./systems/immortalIntro.js";
+import { initHanoiArrival } from "./systems/hanoiArrival.js";
+import { hydrateChapter1, initChapter1, updateChapter1 } from "./systems/chapter1.js";
+import { hydrateChapter2, initChapter2, updateChapter2 } from "./systems/chapter2.js";
+import { hydrateChapter3, initChapter3, updateChapter3 } from "./systems/chapter3.js";
+import { hydrateChapter4, initChapter4, updateChapter4 } from "./systems/chapter4.js";
+import { hydrateFinalEnding, initFinalEnding, updateFinalEnding } from "./systems/finalEnding.js";
 
 function gameLoop(timestamp) {
+  updateCutscene(timestamp);
+  updateFinalEnding();
   updateGameClock(timestamp);
   updateVehicleTransition(timestamp);
   updateWeather();
   updateRandomEvents();
   updateNpcSchedules();
+  updateChapter1(timestamp);
+  updateChapter2();
+  updateChapter3();
+  updateChapter4();
   updateAreaAmbience(timestamp);
   updateEnvironmentInteraction(timestamp);
-  movePlayer();
+  const gameplayCutsceneActive = isCutsceneActive();
+  if (!gameplayCutsceneActive) movePlayer();
   updateBranchingQuests();
   updateTrackedObjective();
   updateNpcReactions(timestamp);
   updateCamera();
-  updatePhotoSpotDiscovery(timestamp);
-  updateNearbyInteractable();
+  if (!gameplayCutsceneActive) {
+    updatePhotoSpotDiscovery(timestamp);
+    updateNearbyInteractable();
+  }
   drawGame();
   requestAnimationFrame(gameLoop);
 }
@@ -51,9 +69,18 @@ function bootGame() {
   setInfoCloseHandler(handlePendingVictory);
   initGameClock();
   setState(loadGame());
+  resumeStoryFromSave();
   initWeather();
   initRandomEvents();
   initAudioManager();
+  initCutsceneController();
+  initChapter1();
+  initChapter2();
+  initChapter3();
+  initChapter4();
+  initFinalEnding();
+  initHanoiArrival();
+  initImmortalIntro();
   resetGameClockFrame();
   initCanvasLayout();
   player.x = state.player.x;
@@ -61,9 +88,15 @@ function bootGame() {
   hydrateEnvironmentInteraction();
   hydrateBranchingQuests();
   hydrateRandomEvents();
+  hydrateChapter1();
+  hydrateChapter2();
+  hydrateChapter3();
+  hydrateChapter4();
+  hydrateFinalEnding();
   updateWeather();
   updateNpcSchedules();
   initNavigation();
+  resumeCutsceneFromStoryCheckpoint();
   if (!isPlayerAreaWalkable(player.x, player.y)) placePlayerAtSafeStart(state.currentMapId);
   snapCameraToPlayer();
   updatePhotoSpotDiscovery(0);
@@ -72,10 +105,12 @@ function bootGame() {
   saveGame();
   initInput();
   initCharacterSelection();
-  if (state.profile.gender) {
-    showMessage("Bắt đầu chuyến đi: hãy ghé Hồ Gươm, ăn đặc sản, sưu tầm tem và mở Sổ tay khám phá bằng phím J.");
-  } else {
+  if (!state.profile.gender) {
     openCharacterSelection({ firstTime: true });
+  } else if (state.story?.introCompleted && state.story?.currentScene === "hanoi-tour") {
+    showMessage("Bắt đầu chuyến đi: hãy ghé Hồ Gươm, ăn đặc sản, sưu tầm tem và mở Sổ tay khám phá bằng phím J.");
+  } else if (!isCutsceneActive()) {
+    resumeImmortalIntroFlow();
   }
   requestAnimationFrame(gameLoop);
 }

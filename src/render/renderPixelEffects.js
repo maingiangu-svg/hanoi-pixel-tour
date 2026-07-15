@@ -3,6 +3,7 @@ import { ctx } from "../state.js";
 
 const SHADOW_COLOR = "rgba(20, 22, 25, 0.24)";
 const LIGHT_SHADOW_COLOR = "rgba(20, 22, 25, 0.18)";
+const SHADOW_EDGE_COLOR = "rgba(20, 22, 25, 0.09)";
 const NO_OPTIONS = Object.freeze({});
 export const FLAT_SHADOW_OPTIONS = Object.freeze({ stepped: false });
 
@@ -15,6 +16,8 @@ export function drawPixelShadow(x, y, width, height, options = NO_OPTIONS) {
   const shadowWidth = Math.max(2, Math.round(width));
   const shadowHeight = Math.max(2, Math.round(height));
 
+  ctx.fillStyle = options.edgeColor || SHADOW_EDGE_COLOR;
+  ctx.fillRect(shadowX - 2, shadowY - 1, shadowWidth + 4, shadowHeight + 3);
   ctx.fillStyle = color;
   ctx.fillRect(shadowX, shadowY, shadowWidth, shadowHeight);
 
@@ -29,6 +32,8 @@ export function drawGroundShadow(centerX, groundY, width, height = 6, options = 
   const x = Math.round(centerX - shadowWidth / 2 + (options.offsetX ?? 4));
   const y = Math.round(groundY + (options.offsetY ?? 2));
 
+  ctx.fillStyle = options.edgeColor || SHADOW_EDGE_COLOR;
+  ctx.fillRect(x - 2, y - 1, shadowWidth + 4, shadowHeight + 3);
   ctx.fillStyle = options.color || SHADOW_COLOR;
   ctx.fillRect(x, y, shadowWidth, shadowHeight);
   if (shadowWidth > 18) {

@@ -22,6 +22,13 @@ export function updateCamera({ snap = false } = {}) {
   camera.width = canvas.width;
   camera.height = canvas.height;
 
+  const cutsceneCamera = runtime.cutscene?.active ? runtime.cutscene.camera : null;
+  if (cutsceneCamera?.locked) {
+    camera.x = clamp(cutsceneCamera.focusX - camera.width / 2, 0, Math.max(0, worldWidth - camera.width));
+    camera.y = clamp(cutsceneCamera.focusY - camera.height / 2, 0, Math.max(0, worldHeight - camera.height));
+    return;
+  }
+
   const playerCenterX = player.x + player.width / 2;
   const playerCenterY = player.y + player.height / 2;
   const focus = runtime.environmentInteraction?.active ? runtime.environmentInteraction.cameraFocus : null;
@@ -41,6 +48,17 @@ export function updateCamera({ snap = false } = {}) {
   camera.y += (targetY - camera.y) * 0.14;
   camera.x = clamp(camera.x, 0, Math.max(0, worldWidth - camera.width));
   camera.y = clamp(camera.y, 0, Math.max(0, worldHeight - camera.height));
+}
+
+export function applyWorldCameraTransform(context) {
+  const cutscene = runtime.cutscene?.active ? runtime.cutscene : null;
+  const zoom = Math.max(1, Number(cutscene?.camera?.zoom) || 1);
+  const shakeX = Number(cutscene?.visual?.shakeX) || 0;
+  const shakeY = Number(cutscene?.visual?.shakeY) || 0;
+  context.translate(canvas.width / 2 + shakeX, canvas.height / 2 + shakeY);
+  context.scale(zoom, zoom);
+  context.translate(-canvas.width / 2, -canvas.height / 2);
+  context.translate(-Math.round(camera.x), -Math.round(camera.y));
 }
 
 export function snapCameraToPlayer() {

@@ -128,20 +128,37 @@ function createViewTabs() {
 function renderNotes() {
   const foods = state.discoveredFoods.map((foodId) => foodCatalog[foodId]).filter(Boolean);
   const landmarks = state.discoveredLandmarks.map((landmarkId) => findLandmark(landmarkId)).filter(Boolean);
+  const historyMarks = state.story?.historyMarks || [];
+  const humanMemories = state.story?.humanMemories || [];
   const stats = document.createElement("div");
   stats.className = "journal-stats";
   stats.appendChild(createJournalStat("Món đã khám phá", `${foods.length}`));
   stats.appendChild(createJournalStat("Địa danh đã tìm hiểu", `${landmarks.length}`));
+  stats.appendChild(createJournalStat("Dấu ấn lịch sử", `${historyMarks.length}`));
+  stats.appendChild(createJournalStat("Ký ức con người", `${humanMemories.length}`));
   ui.journalContent.appendChild(stats);
 
   const grid = document.createElement("div");
   grid.className = "journal-grid";
-  if (!foods.length && !landmarks.length) {
+  if (!foods.length && !landmarks.length && !historyMarks.length && !humanMemories.length) {
     const empty = document.createElement("p");
     empty.className = "journal-empty";
     empty.textContent = "Chưa có ghi chép. Hãy ghé quán ăn hoặc tìm hiểu một địa danh để mở khóa sổ tay.";
     grid.appendChild(empty);
   }
+
+  historyMarks.forEach((markId) => grid.appendChild(createStoryJournalCard(
+    markId === "history-hoan-kiem" ? "Dấu ấn lịch sử · Hồ Gươm" : "Dấu ấn lịch sử",
+    markId === "history-hoan-kiem"
+      ? "Ghi nhận hiểu biết về lịch sử và ý nghĩa của Hồ Gươm giữa lòng Hà Nội."
+      : markId
+  )));
+  humanMemories.forEach((memoryId) => grid.appendChild(createStoryJournalCard(
+    memoryId === "memory-tea-stall" ? "Ký ức con người · Quán trà đá" : "Ký ức con người",
+    memoryId === "memory-tea-stall"
+      ? "Một chiếc bàn thấp, vài chiếc ghế nhựa và câu chuyện khiến người xa lạ ngồi gần nhau hơn."
+      : memoryId
+  )));
 
   foods.forEach((food) => grid.appendChild(createJournalCard({
     title: food.name,
@@ -168,6 +185,17 @@ function renderNotes() {
   });
   ui.journalContent.appendChild(grid);
   updateJournalActionSelection();
+}
+
+function createStoryJournalCard(titleText, summaryText) {
+  const card = document.createElement("article");
+  card.className = "journal-card story-memory-card";
+  const title = document.createElement("h3");
+  title.textContent = titleText;
+  const summary = document.createElement("p");
+  summary.textContent = summaryText;
+  card.append(title, summary);
+  return card;
 }
 
 function renderAlbum() {

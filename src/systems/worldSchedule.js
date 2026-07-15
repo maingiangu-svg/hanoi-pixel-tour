@@ -115,6 +115,15 @@ export function getScheduleEntryForTime(schedule, minuteOfDay) {
   return schedule.find((entry) => isMinuteInRange(minuteOfDay, entry.start, entry.end)) || null;
 }
 
+export function getNpcNextAvailableText(npc, minuteOfDay = getMinuteOfDay(state.gameTime)) {
+  const schedule = NPC_SCHEDULES[npc?.id] || ACTIVITY_SCHEDULES[npc?.activity];
+  if (!Array.isArray(schedule) || !schedule.length) return "NPC này hiện không có lịch hoạt động công khai.";
+  const next = [...schedule]
+    .sort((a, b) => a.start - b.start)
+    .find((entry) => entry.start > minuteOfDay) || [...schedule].sort((a, b) => a.start - b.start)[0];
+  return `NPC này sẽ xuất hiện lại lúc ${formatMinute(next.start)}.`;
+}
+
 export function getShopStatus(shop, minuteOfDay = getMinuteOfDay(state.gameTime)) {
   const scheduleId = shop.foodId || shop.vehicleId;
   const schedule = SHOP_SCHEDULES[scheduleId];
