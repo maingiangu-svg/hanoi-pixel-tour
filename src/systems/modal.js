@@ -242,6 +242,7 @@ export function closeInfoModal() {
 
 export function isOverlayOpen() {
   return Boolean(runtime.cutscene?.active) ||
+    Boolean(runtime.dialogueView?.active) ||
     !ui.inventoryPanel.classList.contains("hidden") ||
     !ui.questPanel.classList.contains("hidden") ||
     !ui.journalPanel.classList.contains("hidden") ||

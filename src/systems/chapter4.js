@@ -15,6 +15,7 @@ import { getPlayerCenter } from "../utils/helpers.js";
 import { playPortalResonance } from "./audioManager.js";
 import { isCutsceneActive, registerCutscene, startCutscene } from "./cutscene.js";
 import { isOverlayOpen, showMessage } from "./modal.js";
+import { enterNpcDialogue } from "./dialogueView.js";
 import { isMoCompanionActive } from "./moCompanion.js";
 import { getTrackedObjective, setTrackedObjective } from "./navigation.js";
 import { getStoryState, unlockStoryMap } from "./storyState.js";
@@ -191,9 +192,16 @@ export function handleChapter4MoInteraction() {
   if (!isChapter4Active() || isMoCompanionActive()) return false;
   const prerequisites = getChapter4PrerequisiteStatus();
   if (!prerequisites.ready) {
-    showMessage(`Mơ: Mình cần bạn nhớ lại thêm. Trước hết hãy ${prerequisites.missing[0].label.toLowerCase()}.`);
+    enterNpcDialogue(runtime.scheduledMo || "mo", {
+      text: `Mình cần bạn nhớ lại thêm. Trước hết hãy ${prerequisites.missing[0].label.toLowerCase()}.`,
+      expression: "worried"
+    });
   } else {
-    showMessage("Mơ: Khi bạn sẵn sàng, hãy cùng mình đi tới giữa nhịp cầu.");
+    enterNpcDialogue(runtime.scheduledMo || "mo", {
+      text: "Khi bạn sẵn sàng, hãy cùng mình đi tới giữa nhịp cầu.",
+      expression: "determined",
+      cameraShot: "close"
+    });
   }
   return true;
 }

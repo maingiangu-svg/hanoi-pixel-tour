@@ -17,6 +17,7 @@ import { playBellChime } from "./audioManager.js";
 import { isCutsceneActive, registerCutscene, startCutscene } from "./cutscene.js";
 import { discoverLandmark } from "./journal.js";
 import { closeInfoModal, isOverlayOpen, openLandmarkInfoPanel, showMessage } from "./modal.js";
+import { enterNpcDialogue } from "./dialogueView.js";
 import { isMoCompanionActive } from "./moCompanion.js";
 import { getTrackedObjective, setTrackedObjective } from "./navigation.js";
 import { getMoChildren, isMassInProgress } from "./npcSchedule.js";
@@ -279,7 +280,10 @@ export function handleChapter2MoInteraction(npc) {
   if (!isChapter2Active() || isMoCompanionActive()) return false;
   const stage = getChapter2Progress().stage;
   if (stage === "hangoutInvite") return false;
-  showMessage(getChapter2MoDialogue(npc));
+  enterNpcDialogue(npc || runtime.scheduledMo || "mo", {
+    text: getChapter2MoDialogue(npc),
+    expression: ["walkingToChurch", "enteringChurch", "attendingMass"].includes(npc?.state) ? "concerned" : "gentleSmile"
+  });
   return true;
 }
 

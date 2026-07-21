@@ -331,11 +331,19 @@ async function runFullChapter() {
   assert.equal(current.flags["mo-suspects-player-origin"], true);
 
   await evaluate(`(async () => {
-    const { runtime, ui } = await import("./src/state.js");
+    const { runtime } = await import("./src/state.js");
+    const { handleDialogueViewKey, updateDialogueView } = await import("./src/systems/dialogueView.js");
     const { handleScheduledNpc } = await import("./src/systems/interaction.js");
     handleScheduledNpc(runtime.scheduledMo);
-    ui.choiceActions.querySelectorAll("button")[1]?.click();
-    ui.choiceActions.querySelectorAll("button")[0]?.click();
+    updateDialogueView(performance.now() + 300);
+    handleDialogueViewKey("s");
+    handleDialogueViewKey("s");
+    handleDialogueViewKey("enter");
+    updateDialogueView(performance.now() + 600);
+    updateDialogueView(performance.now() + 900);
+    handleDialogueViewKey("s");
+    handleDialogueViewKey("enter");
+    updateDialogueView(performance.now() + 1200);
   })()`);
   await delay(220);
   current = await getState();
@@ -395,10 +403,13 @@ async function runFullChapter() {
     interaction.interact();
   })()`);
   await delay(100);
-  assert.equal((await getState()).choiceOpen, true);
+  assert.equal(await evaluate(`(async () => Boolean((await import("./src/state.js")).runtime.dialogueView?.active))()`), true);
   await evaluate(`(async () => {
-    const { ui } = await import("./src/state.js");
-    ui.choiceActions.querySelectorAll("button")[0]?.click();
+    const { handleDialogueViewKey, updateDialogueView } = await import("./src/systems/dialogueView.js");
+    updateDialogueView(performance.now() + 300);
+    handleDialogueViewKey("s");
+    handleDialogueViewKey("enter");
+    updateDialogueView(performance.now() + 600);
   })()`);
   await delay(220);
   current = await getState();

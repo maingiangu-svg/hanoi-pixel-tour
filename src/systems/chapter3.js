@@ -17,6 +17,7 @@ import { updateHud } from "../render/renderUI.js";
 import { isCutsceneActive, registerCutscene, startCutscene } from "./cutscene.js";
 import { discoverLandmark } from "./journal.js";
 import { closeInfoModal, isOverlayOpen, openLandmarkInfoPanel, showMessage } from "./modal.js";
+import { enterNpcDialogue } from "./dialogueView.js";
 import { isMoCompanionActive } from "./moCompanion.js";
 import { getTrackedObjective, setTrackedObjective } from "./navigation.js";
 import { openQuiz } from "./quiz.js";
@@ -276,7 +277,10 @@ export function handleChapter3Interaction(point) {
 
 export function handleChapter3MoInteraction() {
   if (!isChapter3Active() || isMoCompanionActive()) return false;
-  showMessage(`Mơ: ${getChapter3MoDialogue()}`);
+  enterNpcDialogue(runtime.scheduledMo || "mo", {
+    text: getChapter3MoDialogue(),
+    expression: ["fearChoice", "moRecognition"].includes(getChapter3Progress().stage) ? "worried" : "curious"
+  });
   return true;
 }
 

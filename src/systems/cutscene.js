@@ -284,7 +284,11 @@ export function showCutsceneDialogue(entry = {}) {
     speaker: kind === "narration" ? "" : (entry.speaker || (kind === "internal" ? "Mơ (nghĩ)" : "")),
     text: String(entry.text || ""),
     choices,
-    selectedIndex: -1
+    selectedIndex: -1,
+    portraitId: entry.portraitId || null,
+    expression: entry.expression || "neutral",
+    pose: entry.pose || "idle",
+    cameraShot: entry.cameraShot || "medium"
   };
   cutscene.waitingForInput = true;
   renderCutsceneDialogue();

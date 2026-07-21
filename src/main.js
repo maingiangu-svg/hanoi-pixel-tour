@@ -35,9 +35,11 @@ import { hydrateChapter3, initChapter3, updateChapter3 } from "./systems/chapter
 import { hydrateChapter4, initChapter4, updateChapter4 } from "./systems/chapter4.js";
 import { hydrateFinalEnding, initFinalEnding, updateFinalEnding } from "./systems/finalEnding.js";
 import { hydrateViewMode, isViewModeActive, updateViewMode } from "./systems/viewMode.js";
+import { hydrateDialogueView, initDialogueView, isDialogueViewActive, updateDialogueView } from "./systems/dialogueView.js";
 
 function gameLoop(timestamp) {
   updateCutscene(timestamp);
+  updateDialogueView(timestamp);
   updateFinalEnding();
   updateGameClock(timestamp);
   updateVehicleTransition(timestamp);
@@ -51,12 +53,14 @@ function gameLoop(timestamp) {
   updateAreaAmbience(timestamp);
   updateEnvironmentInteraction(timestamp);
   updateViewMode(timestamp);
-  const gameplayLocked = isCutsceneActive() || isViewModeActive();
+  const gameplayLocked = isCutsceneActive() || isDialogueViewActive() || isViewModeActive();
   if (!gameplayLocked) movePlayer();
-  updateBranchingQuests();
+  if (!gameplayLocked) updateBranchingQuests();
   updateTrackedObjective();
-  updateNpcReactions(timestamp);
-  updateCamera();
+  if (!isDialogueViewActive()) {
+    updateNpcReactions(timestamp);
+    updateCamera();
+  }
   if (!gameplayLocked) {
     updatePhotoSpotDiscovery(timestamp);
     updateNearbyInteractable();
@@ -76,6 +80,7 @@ function bootGame() {
   initRandomEvents();
   initAudioManager();
   initCutsceneController();
+  initDialogueView();
   initChapter1();
   initChapter2();
   initChapter3();
@@ -89,6 +94,7 @@ function bootGame() {
   player.y = state.player.y;
   hydrateEnvironmentInteraction();
   hydrateViewMode();
+  hydrateDialogueView();
   hydrateBranchingQuests();
   hydrateRandomEvents();
   hydrateChapter1();

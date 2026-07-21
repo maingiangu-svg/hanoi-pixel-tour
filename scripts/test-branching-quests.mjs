@@ -61,7 +61,6 @@ const stateModule = await import("../src/state.js");
 const { branchingQuests, branchingQuestActors } = await import("../src/data/branchingQuests.js");
 const { normalizeState } = await import("../src/storage.js");
 const { isNpcAreaWalkable } = await import("../src/utils/collision.js");
-const { activateSelectedChoiceAction, moveChoiceActionSelection } = await import("../src/systems/modal.js");
 const {
   advanceQuestNode,
   chooseQuestOption,
@@ -76,6 +75,7 @@ const {
   updateBranchingQuests
 } = await import("../src/systems/branchingQuest.js");
 const { canUseVehicleWithQuestFollower, getQuestFollowersForMap } = await import("../src/systems/questFollower.js");
+const { handleDialogueViewKey, updateDialogueView } = await import("../src/systems/dialogueView.js");
 
 function reset(overrides = {}) {
   stateModule.setState(normalizeState({ ...overrides, profile: { gender: "female" } }));
@@ -123,9 +123,12 @@ for (const actor of branchingQuestActors) {
 reset({ money: 50000 });
 assert.deepEqual(stateModule.state.branchingQuestProgress, {}, "Save cũ phải có fallback rỗng");
 handleBranchingQuestActor(branchingQuestActors.find((actor) => actor.id === "lostTourist"));
-assert.equal(stateModule.ui.choiceModal.classList.contains("hidden"), false);
-moveChoiceActionSelection(1);
-activateSelectedChoiceAction();
+assert.equal(stateModule.runtime.dialogueView?.profileId, "tourist");
+updateDialogueView(performance.now() + 300);
+handleDialogueViewKey("s");
+handleDialogueViewKey("s");
+handleDialogueViewKey("enter");
+updateDialogueView(performance.now() + 600);
 assert.equal(stateModule.state.branchingQuestProgress.lostTourist.choices[0], "escort", "W/S và Enter phải kích hoạt lựa chọn đang highlight");
 
 reset({ money: 50000 });

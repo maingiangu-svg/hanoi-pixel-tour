@@ -121,9 +121,9 @@ export const CHAPTER_3_CUTSCENES = Object.freeze({
     { type: "letterbox", to: 0, duration: 220 }
   ]),
   guideHistory: Object.freeze([
-    speech("Hướng dẫn viên", "Quảng trường Ba Đình không chỉ là một không gian nghi lễ. Ngày 2 tháng 9 năm 1945 khiến nơi này trở thành một mốc của lịch sử quốc gia hiện đại."),
-    speech("Hướng dẫn viên", "Lăng Chủ tịch Hồ Chí Minh và Chùa Một Cột ở gần nhau nhưng thuộc những lớp thời gian rất khác. Đọc chúng cùng nhau, ta thấy Hà Nội không chỉ có một quá khứ."),
-    speech("Mơ", "Bạn nghe kỹ nhé. Có khi lịch sử chung sẽ giúp ký ức riêng của bạn tìm được chỗ đứng.")
+    speech("Hướng dẫn viên", "Quảng trường Ba Đình không chỉ là một không gian nghi lễ. Ngày 2 tháng 9 năm 1945 khiến nơi này trở thành một mốc của lịch sử quốc gia hiện đại.", { portraitId: "guide", expression: "determined", pose: "explain" }),
+    speech("Hướng dẫn viên", "Lăng Chủ tịch Hồ Chí Minh và Chùa Một Cột ở gần nhau nhưng thuộc những lớp thời gian rất khác. Đọc chúng cùng nhau, ta thấy Hà Nội không chỉ có một quá khứ.", { portraitId: "guide", expression: "neutral", pose: "gesture" }),
+    speech("Mơ", "Bạn nghe kỹ nhé. Có khi lịch sử chung sẽ giúp ký ức riêng của bạn tìm được chỗ đứng.", { portraitId: "mo", expression: "curious" })
   ]),
   focusChoice: Object.freeze([
     {
@@ -238,8 +238,8 @@ export const CHAPTER_3_CUTSCENES = Object.freeze({
     { type: "letterbox", to: 0, duration: 220 }
   ]),
   oldWitness: Object.freeze([
-    speech("Ông lão", "Nhiều năm trước, trong một đêm giông, có một đứa trẻ mất tích gần cầu."),
-    speech("Ông lão", "Người ta chỉ tìm thấy chiếc dây đeo bị đứt."),
+    speech("Ông lão", "Nhiều năm trước, trong một đêm giông, có một đứa trẻ mất tích gần cầu.", { portraitId: "oldWitness", expression: "sad", cameraShot: "close" }),
+    speech("Ông lão", "Người ta chỉ tìm thấy chiếc dây đeo bị đứt.", { portraitId: "oldWitness", expression: "concerned" }),
     narration("Bạn chạm vào mặt dây chuyền. Một chuỗi hình ảnh vỡ ra trong đầu."),
     memoryFlash("long-bien-tracks", 320),
     memoryFlash("storm-rain", 300),
@@ -259,8 +259,8 @@ function point(id, label, x, y, kind, radius) {
   return Object.freeze({ id, label, mapId: "baDinh", x, y, kind, radius, visibleRange: 230 });
 }
 
-function speech(speaker, text) {
-  return Object.freeze({ type: "dialogue", kind: "speech", speaker, text });
+function speech(speaker, text, presentation = {}) {
+  return Object.freeze({ type: "dialogue", kind: "speech", speaker, text, ...presentation });
 }
 
 function internal(text) {

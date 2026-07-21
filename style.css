@@ -266,6 +266,18 @@ canvas {
   visibility: hidden;
 }
 
+.game-frame.is-dialogue-view .top-bar,
+.game-frame.is-dialogue-view .nearby-hint,
+.game-frame.is-dialogue-view .vehicle-status,
+.game-frame.is-dialogue-view .dialogue-box {
+  opacity: 0;
+  visibility: hidden;
+}
+
+body.is-dialogue-view-ui-hidden .title-row {
+  display: none;
+}
+
 body.is-immortal-intro .app-shell {
   min-height: 100dvh;
   padding: 0;
@@ -312,6 +324,13 @@ body.is-immortal-intro .game-frame {
   border-color: #d9b95f;
   background: rgba(18, 19, 24, 0.96);
   color: #fff0b8;
+}
+
+.cutscene-dialogue.is-cinematic-dialogue {
+  bottom: 3.5%;
+  width: min(84%, 720px);
+  min-height: 86px;
+  background: rgba(18, 19, 25, 0.96);
 }
 
 .cutscene-kind,

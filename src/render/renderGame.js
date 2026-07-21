@@ -38,11 +38,16 @@ import { drawChapter3CutsceneBackdrop, drawChapter3Story } from "./renderChapter
 import { drawChapter4CutsceneBackdrop, drawChapter4Story } from "./renderChapter4.js";
 import { drawFinalEndingBackdrop } from "./renderFinalEnding.js";
 import { drawViewModeScene } from "./renderViewMode.js";
+import { drawDialogueViewScene } from "./renderDialogueView.js";
 
 export function drawGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (drawImmortalIntroScene()) {
     drawCutsceneOverlay();
+    return;
+  }
+
+  if (drawDialogueViewScene()) {
     return;
   }
 

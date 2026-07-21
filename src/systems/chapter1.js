@@ -14,6 +14,7 @@ import { findLandmark, getPlayerCenter, isQuizCorrect } from "../utils/helpers.j
 import { updateHud } from "../render/renderUI.js";
 import { isCutsceneActive, registerCutscene, startCutscene } from "./cutscene.js";
 import { closeChoiceModal, closeInfoModal, isOverlayOpen, openChoiceModal, openLandmarkInfoPanel, showMessage } from "./modal.js";
+import { enterNpcDialogue } from "./dialogueView.js";
 import { getTrackedObjective, setTrackedObjective } from "./navigation.js";
 import { openQuiz } from "./quiz.js";
 import {
@@ -208,7 +209,10 @@ export function handleChapter1MoInteraction() {
   const line = progress.stage === "chapterComplete"
     ? "Mơ: Mình nghĩ đã đến lúc đi tới nơi tiếp theo."
     : `Mơ: ${CHAPTER_1_OBJECTIVES[progress.stage] || "Mình đi tiếp nhé."}`;
-  showMessage(line);
+  enterNpcDialogue(runtime.scheduledMo || "mo", {
+    text: line.replace(/^Mơ:\s*/, ""),
+    expression: progress.stage === "chapterComplete" ? "determined" : "gentleSmile"
+  });
   return true;
 }
 

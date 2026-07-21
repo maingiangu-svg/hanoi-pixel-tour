@@ -168,6 +168,7 @@ export const runtime = {
     active: false,
     openedAt: 0
   },
+  dialogueView: null,
   environmentInteraction: {
     active: false,
     id: null,

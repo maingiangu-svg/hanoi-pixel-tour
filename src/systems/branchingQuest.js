@@ -10,6 +10,7 @@ import { beginMapTransition } from "./mapTransition.js";
 import { closeChoiceModal, openChoiceModal, showMessage } from "./modal.js";
 import { isMoCompanionActive, syncMoCompanionToPlayer } from "./moCompanion.js";
 import { hydrateQuestFollower, startQuestFollower, updateQuestFollower } from "./questFollower.js";
+import { enterNpcDialogue, isNpcCinematicDialogueEnabled } from "./dialogueView.js";
 
 const ACTIVE_STATUSES = new Set(["active", "unresolved"]);
 
@@ -136,24 +137,45 @@ export function applyQuestConsequence(questId) {
   return true;
 }
 
-export function openBranchingQuest(questId) {
+export function openBranchingQuest(questId, options = {}) {
   const quest = branchingQuests[questId];
   const progress = state.branchingQuestProgress[questId] || startBranchingQuest(questId);
+  const actor = options.actor || null;
   if (!quest || !progress) {
     showMessage("Nhiệm vụ này chưa thể bắt đầu lúc này.");
     return false;
   }
 
   if (progress.status === "completed" || progress.status === "failed") {
-    showMessage(getConsequenceDialogue(questId, progress));
+    showActorDialogue(actor, getConsequenceDialogue(questId, progress), "happy");
     return true;
   }
 
   const node = getCurrentQuestNode(questId);
   if (!node) return false;
   if (node.type !== "choice") {
-    showMessage(node.hint || "Hãy tiếp tục mục tiêu hiện tại.");
+    showActorDialogue(actor, node.hint || "Hãy tiếp tục mục tiêu hiện tại.", "concerned");
     return true;
+  }
+
+  if (actor && isNpcCinematicDialogueEnabled(actor)) {
+    return enterNpcDialogue(actor, {
+      text: getChoiceBody(node),
+      expression: "neutral",
+      pose: "gesture",
+      choices: node.choices.map((entry) => ({
+        text: entry.text,
+        disabled: !meetsRequirement(entry.requires),
+        expression: getBranchChoiceExpression(entry.id),
+        afterClose: () => {
+          if (entry.confirm) {
+            openChoiceConfirmation(questId, entry);
+            return;
+          }
+          if (chooseQuestOption(questId, entry.id)) openNextNodeOrHint(questId, actor);
+        }
+      })).concat({ text: "Để sau" })
+    });
   }
 
   openChoiceModal({
@@ -216,23 +238,23 @@ export function handleBranchingQuestActor(actor) {
   if (!progress) {
     if (!actor.start) return false;
     startBranchingQuest(actor.questId);
-    openBranchingQuest(actor.questId);
+    openBranchingQuest(actor.questId, { actor });
     return true;
   }
   if (progress.status === "completed" || progress.status === "failed") {
-    showMessage(getConsequenceDialogue(actor.questId, progress));
+    showActorDialogue(actor, getConsequenceDialogue(actor.questId, progress), "happy");
     return true;
   }
 
   const node = getCurrentQuestNode(actor.questId);
   if (node?.type === "choice") {
-    openBranchingQuest(actor.questId);
+    openBranchingQuest(actor.questId, { actor });
     return true;
   }
   if (consumeActorObjective(actor.questId, actor.id)) {
     return true;
   }
-  showMessage(node?.hint || `${actor.name}: Chúng ta sẽ nói tiếp sau nhé.`);
+  showActorDialogue(actor, node?.hint || "Chúng ta sẽ nói tiếp sau nhé.", "concerned");
   return true;
 }
 
@@ -335,12 +357,26 @@ function openChoiceConfirmation(questId, entry) {
   });
 }
 
-function openNextNodeOrHint(questId) {
+function showActorDialogue(actor, text, expression = "neutral") {
+  if (actor && isNpcCinematicDialogueEnabled(actor)) {
+    return enterNpcDialogue(actor, { text, expression });
+  }
+  showMessage(text);
+  return true;
+}
+
+function getBranchChoiceExpression(choiceId) {
+  if (/decline|keep|skip|wrong/i.test(choiceId)) return "concerned";
+  if (/escort|help|return|find|share/i.test(choiceId)) return "happy";
+  return "curious";
+}
+
+function openNextNodeOrHint(questId, actor = null) {
   const progress = state.branchingQuestProgress[questId];
   if (!progress || !ACTIVE_STATUSES.has(progress.status)) return;
   const node = getCurrentQuestNode(questId);
-  if (node?.type === "choice") openBranchingQuest(questId);
-  else if (node?.hint) showMessage(node.hint);
+  if (node?.type === "choice") openBranchingQuest(questId, { actor });
+  else if (node?.hint) showActorDialogue(actor, node.hint, "concerned");
 }
 
 function consumeActorObjective(questId, actorId) {

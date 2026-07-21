@@ -63,6 +63,8 @@ import {
   handleChapter4Interaction,
   handleChapter4MoInteraction
 } from "./chapter4.js";
+import { enterNpcDialogue, isNpcCinematicDialogueEnabled } from "./dialogueView.js";
+import { openCinematicNpcTask } from "./cinematicNpcInteractions.js";
 
 export function updateNearbyInteractable() {
   if (runtime.viewMode?.active) {
@@ -322,7 +324,9 @@ export function interact() {
     ? interactable.source?.type
     : null;
   if (isRidingVehicle() && !["exit", "parking"].includes(interactable.type) && ridingEnvironmentType !== "vehicleWalkZone") {
-    showMessage("Nhấn V để xuống xe trước khi tương tác.");
+    const cinematicTarget = ["npc", "scheduledNpc", "branchingQuest"].includes(interactable.type) &&
+      isNpcCinematicDialogueEnabled(interactable.source || interactable.object);
+    showMessage(cinematicTarget ? "Hãy xuống xe để nói chuyện." : "Nhấn V để xuống xe trước khi tương tác.");
     return;
   }
 
@@ -522,6 +526,10 @@ export function handleNpc(npc) {
   }
   const task = npc.task;
 
+  if (isNpcCinematicDialogueEnabled(npc) && openCinematicNpcTask(npc, task, { completeTask: completeNpcTask })) {
+    return;
+  }
+
   if (!task) {
     showMessage(`${npc.name}: Chúc bạn có một chuyến đi vui vẻ.`);
     return;
@@ -650,7 +658,13 @@ export function handleScheduledNpc(npc) {
 
   const dialogue = getScheduledNpcDialogue(npc);
   if (npc.id === "chaXu") {
-    showMessage(dialogue);
+    enterNpcDialogue(npc, {
+      text: dialogue,
+      expression: npc.state === "mass" ? "determined" : "gentleSmile",
+      pose: npc.state === "mass" ? "explain" : "idle",
+      cameraShot: "medium",
+      allowExit: true
+    });
     return;
   }
 
@@ -694,90 +708,76 @@ function handleMoInteraction(npc) {
   }
 
   if (!canInviteMo(npc)) {
-    showMessage(getMoInvitationBlockedMessage(npc));
+    enterNpcDialogue(npc, {
+      text: getMoInvitationBlockedMessage(npc).replace(/^Mơ:\s*/, ""),
+      expression: npc.state === "attendingMass" ? "concerned" : "worried",
+      cameraShot: "close"
+    });
     return;
   }
 
   const dialogue = getChapter2MoDialogue(npc) || getScheduledNpcDialogue(npc);
-  openChoiceModal({
-    tag: "Mơ",
-    title: "Mơ",
-    body: dialogue,
-    actions: [
+  enterNpcDialogue(npc, {
+    text: dialogue.replace(/^Mơ:\s*/, ""),
+    expression: getMoExpression(npc),
+    choices: [
       {
-        label: "Nói chuyện",
-        className: "primary-choice",
-        onClick: () => {
-          closeChoiceModal();
-          showMessage(dialogue);
-        }
+        text: "Nói chuyện",
+        expression: "gentleSmile",
+        response: { text: dialogue.replace(/^Mơ:\s*/, ""), expression: "gentleSmile" }
       },
-      {
-        label: "Mời Mơ đi chơi",
-        onClick: () => {
-          closeChoiceModal();
-          openMoHangoutConfirmation(npc);
-        }
-      },
-      { label: "Rời đi", onClick: closeChoiceModal }
+      { text: "Mời Mơ đi chơi", expression: "curious", afterClose: () => openMoHangoutConfirmation(npc) },
+      { text: "Rời đi" }
     ]
   });
 }
 
 function openMoHangoutConfirmation(npc) {
-  openChoiceModal({
-    tag: "Mơ",
-    title: "Đi chơi cùng Mơ",
-    body: "Được thôi, mình đi cùng bạn nhé. Nhưng nhớ đưa mình về Nhà thờ Lớn nhé!",
-    actions: [
+  enterNpcDialogue(npc, {
+    text: "Được thôi, mình đi cùng bạn nhé. Nhưng nhớ đưa mình về Nhà thờ Lớn nhé!",
+    expression: "gentleSmile",
+    pose: "gesture",
+    choices: [
       {
-        label: "Đi thôi",
-        className: "primary-choice",
-        onClick: () => {
+        text: "Đi thôi",
+        expression: "gentleSmile",
+        afterClose: () => {
           const currentMo = runtime.scheduledMo || npc;
           if (!canInviteMo(currentMo) || !startMoHangout()) {
-            closeChoiceModal();
             showMessage(getMoInvitationBlockedMessage(currentMo));
             return;
           }
 
-          closeChoiceModal();
           updateNpcSchedules();
           saveGame();
           showMessage("Mơ đang đi cùng bạn. Thời gian đã tạm dừng - hãy đưa Mơ về Nhà thờ Lớn để tiếp tục.");
         }
       },
-      { label: "Để hôm khác", onClick: closeChoiceModal }
+      { text: "Để hôm khác", expression: "neutral" }
     ]
   });
 }
 
 function openMoCompanionMenu() {
   const dialogue = getMoCompanionDialogue();
-  openChoiceModal({
-    tag: "Đi chơi cùng Mơ",
-    title: "Mơ",
-    body: dialogue,
-    actions: [
+  enterNpcDialogue(runtime.moCompanionNpc || "mo", {
+    text: dialogue.replace(/^Mơ:\s*/, ""),
+    expression: "gentleSmile",
+    choices: [
       {
-        label: "Nói chuyện",
-        className: "primary-choice",
-        onClick: () => {
-          closeChoiceModal();
-          showMessage(dialogue);
-        }
+        text: "Nói chuyện",
+        expression: "gentleSmile",
+        response: { text: dialogue.replace(/^Mơ:\s*/, ""), expression: "gentleSmile" }
       },
       {
-        label: "Mơ muốn đi đâu?",
-        onClick: () => {
-          closeChoiceModal();
-          openMoDestinationQuest();
-        }
+        text: "Mơ muốn đi đâu?",
+        expression: "curious",
+        afterClose: openMoDestinationQuest
       },
       {
-        label: "Đưa Mơ về Nhà thờ",
-        onClick: () => {
-          closeChoiceModal();
+        text: "Đưa Mơ về Nhà thờ",
+        expression: "concerned",
+        afterClose: () => {
           if (isNearMoReturnPoint()) {
             openMoReturnConfirmation();
           } else {
@@ -785,7 +785,7 @@ function openMoCompanionMenu() {
           }
         }
       },
-      { label: "Tiếp tục đi chơi", onClick: closeChoiceModal }
+      { text: "Tiếp tục đi chơi", expression: "gentleSmile" }
     ]
   });
 }
@@ -796,16 +796,14 @@ function openMoReturnConfirmation() {
     return;
   }
 
-  openChoiceModal({
-    tag: "Đi chơi cùng Mơ",
-    title: "Đưa Mơ về Nhà thờ",
-    body: "Bạn muốn kết thúc buổi đi chơi và đưa Mơ về Nhà thờ?",
-    actions: [
+  enterNpcDialogue(runtime.moCompanionNpc || "mo", {
+    text: "Chúng mình về tới Nhà thờ rồi. Bạn muốn kết thúc buổi đi chơi chứ?",
+    expression: "gentleSmile",
+    choices: [
       {
-        label: "Đưa Mơ về",
-        className: "primary-choice",
-        onClick: () => {
-          closeChoiceModal();
+        text: "Đưa Mơ về",
+        expression: "relieved",
+        afterClose: () => {
           endMoHangout();
           notifyMoReturned();
           updateNpcSchedules();
@@ -813,9 +811,16 @@ function openMoReturnConfirmation() {
           showMessage("Bạn đã đưa Mơ về Nhà thờ Lớn. Thời gian tiếp tục.");
         }
       },
-      { label: "Đi chơi thêm", onClick: closeChoiceModal }
+      { text: "Đi chơi thêm", expression: "gentleSmile" }
     ]
   });
+}
+
+function getMoExpression(npc) {
+  if (["walkingToChurch", "enteringChurch"].includes(npc?.state)) return "worried";
+  if (["washing", "resting"].includes(npc?.state)) return "neutral";
+  if (npc?.state === "playingWithChildren") return "gentleSmile";
+  return "curious";
 }
 
 export function completeNpcTask(task) {

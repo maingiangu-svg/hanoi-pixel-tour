@@ -17,6 +17,7 @@ import { handleCutsceneKey, isCutsceneActive } from "./systems/cutscene.js";
 import { handleFinalEndingKey, isFinalEndingPanelOpen } from "./systems/finalEnding.js";
 import { handleGameClockTimeScaleDebugKey, isGameClockTimeScaleDebugEnabled } from "./systems/gameClock.js";
 import { handleViewModeKey, isViewModeActive } from "./systems/viewMode.js";
+import { handleDialogueViewKey, isDialogueViewActive } from "./systems/dialogueView.js";
 
 const movementKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"];
 const handledKeys = [...movementKeys, " ", "enter", "escape", "e", "h", "i", "q", "j", "m", "p", "r", "tab", "v"];
@@ -38,13 +39,18 @@ export function initInput() {
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
     if (handledKeys.includes(key) || (isGameClockTimeScaleDebugEnabled() && gameClockDebugKeys.includes(key))) event.preventDefault();
-    if (event.repeat && ["v", "e", "enter", " "].includes(key)) return;
+    if (event.repeat && ["v", "e", "enter", " ", "tab"].includes(key)) return;
     if (event.repeat && gameClockDebugKeys.includes(key)) return;
 
     if (handleGameClockTimeScaleDebugKey(key)) return;
 
     if (isCutsceneActive()) {
       handleCutsceneKey(key);
+      return;
+    }
+
+    if (isDialogueViewActive()) {
+      handleDialogueViewKey(key);
       return;
     }
 

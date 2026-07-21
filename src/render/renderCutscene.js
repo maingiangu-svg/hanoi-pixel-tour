@@ -1,18 +1,31 @@
 import { applyWorldCameraTransform } from "../camera.js";
 import { canvas, ctx, runtime, state } from "../state.js";
 import { drawMoSprite } from "./renderCompanion.js";
+import { drawCutsceneDialoguePortrait } from "./renderDialogueView.js";
+import { clearDialogueBackgroundCache } from "./renderDialogueBackground.js";
 
 let snapshotCanvas = null;
 let pixelCanvas = null;
 let capturedCutsceneId = null;
+let portraitSceneActive = false;
 
 export function drawCutsceneOverlay() {
   const cutscene = runtime.cutscene;
   if (!cutscene?.active) {
     clearCutsceneRenderBuffers();
+    if (portraitSceneActive) {
+      clearDialogueBackgroundCache();
+      portraitSceneActive = false;
+    }
     return;
   }
 
+  if (cutscene.dialogue?.portraitId && !cutscene.suspicion?.active) {
+    portraitSceneActive = drawCutsceneDialoguePortrait(cutscene);
+  } else if (portraitSceneActive) {
+    clearDialogueBackgroundCache();
+    portraitSceneActive = false;
+  }
   if (cutscene.suspicion?.active) drawSuspicionFocus(cutscene);
   drawLightingOverride(cutscene.visual);
   drawLetterbox(cutscene.visual.letterbox);

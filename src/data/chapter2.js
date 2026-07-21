@@ -108,10 +108,10 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
     { type: "letterbox", to: 0, duration: 220 }
   ]),
   priest: Object.freeze([
-    speech("Cha xứ", "Có những ký ức không trở lại bằng hình ảnh, mà bằng một âm thanh ta từng nghe khi còn rất nhỏ."),
+    speech("Cha xứ", "Có những ký ức không trở lại bằng hình ảnh, mà bằng một âm thanh ta từng nghe khi còn rất nhỏ.", { portraitId: "priest", expression: "concerned", pose: "explain" }),
     speech("Bạn", "Nếu tiếng chuông mở được một khe trong ký ức, con nên tìm phần còn lại ở đâu?"),
-    speech("Cha xứ", "Hãy nhìn công trình, lắng nghe người sống quanh nó, rồi để ký ức tự tìm đường. Đừng ép nó."),
-    speech("Mơ", "Mình sẽ giúp bạn tìm hiểu nơi này.")
+    speech("Cha xứ", "Hãy nhìn công trình, lắng nghe người sống quanh nó, rồi để ký ức tự tìm đường. Đừng ép nó.", { portraitId: "priest", expression: "gentleSmile", pose: "gesture" }),
+    speech("Mơ", "Mình sẽ giúp bạn tìm hiểu nơi này.", { portraitId: "mo", expression: "determined" })
   ]),
   children: Object.freeze([
     narration("Chiếc chong chóng giấy của bọn trẻ mắc trên một cành thấp cạnh sân."),
@@ -157,6 +157,9 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
       kind: "speech",
       speaker: "Mơ",
       text: "Bạn đã đi cùng mình cả một buổi. Bạn đang nghĩ gì vậy?",
+      portraitId: "mo",
+      expression: "curious",
+      cameraShot: "close",
       choices: Object.freeze([
         Object.freeze({ id: "trust", text: "Cảm ơn vì đã tin ta.", choiceKey: "chapter2RelationshipChoice", value: "trust", scores: Object.freeze({ compassion: 1, belonging: 1 }) }),
         Object.freeze({ id: "return", text: "Ta chỉ cần tìm đường về.", choiceKey: "chapter2RelationshipChoice", value: "return", scores: Object.freeze({ return: 1 }) }),
@@ -167,9 +170,9 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
       type: "choiceDialogue",
       choiceKey: "chapter2RelationshipChoice",
       entries: Object.freeze({
-        trust: speech("Mơ", "Mình chưa hiểu hết chuyện của bạn, nhưng mình tin những gì bạn đang cố nhớ."),
-        return: speech("Mơ", "Mình hiểu. Dù vậy, trước khi tìm được đường về, bạn đừng tự gánh mọi thứ một mình."),
-        truth: speech("Mơ", "Mình có vài điều chưa chắc chắn. Khi hiểu rõ hơn, mình hứa sẽ nói với bạn.")
+        trust: speech("Mơ", "Mình chưa hiểu hết chuyện của bạn, nhưng mình tin những gì bạn đang cố nhớ.", { portraitId: "mo", expression: "gentleSmile" }),
+        return: speech("Mơ", "Mình hiểu. Dù vậy, trước khi tìm được đường về, bạn đừng tự gánh mọi thứ một mình.", { portraitId: "mo", expression: "sad" }),
+        truth: speech("Mơ", "Mình có vài điều chưa chắc chắn. Khi hiểu rõ hơn, mình hứa sẽ nói với bạn.", { portraitId: "mo", expression: "worried", pose: "lookAside" })
       })
     }
   ]),
@@ -188,8 +191,8 @@ function point(id, label, mapId, x, y, kind, radius) {
   return Object.freeze({ id, label, mapId, x, y, kind, radius, visibleRange: 230 });
 }
 
-function speech(speaker, text) {
-  return Object.freeze({ type: "dialogue", kind: "speech", speaker, text });
+function speech(speaker, text, presentation = {}) {
+  return Object.freeze({ type: "dialogue", kind: "speech", speaker, text, ...presentation });
 }
 
 function internal(text) {
