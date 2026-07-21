@@ -50,7 +50,7 @@ const interactions = [
     sheltered: true,
     companionPosition: { x: 1202, y: 1078, facing: "right", activity: "resting" }
   }),
-  railingView("view-cau-long-bien", "longBien", "photo-cau-long-bien", "Cầu Long Biên", "Khung thép và đường ray kéo dài về phía bờ sông.", ["longBienTrainPass"], { x: 120, y: -20 }),
+  railingView("view-cau-long-bien", "longBien", "photo-cau-long-bien", "Cầu Long Biên", "Khung thép và đường ray kéo dài về phía bờ sông.", [], { x: 120, y: -20 }),
   railingView("view-duong-ray-long-bien", "longBien", "photo-duong-ray-long-bien", "Đường ray Cầu Long Biên", "Nhịp ray chạy giữa kết cấu thép cũ. Hãy đứng sau vùng cảnh báo khi tàu đi qua.", ["longBienTrainPass"]),
   railingView("view-song-hong", "longBien", "photo-song-hong", "Sông Hồng", "Từ cầu nhìn xuống, mặt sông và bãi bồi mở rộng phía ngoài khu dân cư.", [], { x: 120, y: 0 }),
   inspect("inspect-long-bien-warning", "longBien", 1010, 520, "Biển cảnh báo đường sắt", "Không đứng trên đường ray và luôn chờ tín hiệu an toàn trước khi đi qua."),

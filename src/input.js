@@ -15,9 +15,12 @@ import { handlePhotoModeKey, isPhotoModeActive, togglePhotoMode } from "./system
 import { handleEnvironmentInteractionKey, isEnvironmentInteractionActive } from "./systems/environmentInteraction.js";
 import { handleCutsceneKey, isCutsceneActive } from "./systems/cutscene.js";
 import { handleFinalEndingKey, isFinalEndingPanelOpen } from "./systems/finalEnding.js";
+import { handleGameClockTimeScaleDebugKey, isGameClockTimeScaleDebugEnabled } from "./systems/gameClock.js";
+import { handleViewModeKey, isViewModeActive } from "./systems/viewMode.js";
 
 const movementKeys = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"];
 const handledKeys = [...movementKeys, " ", "enter", "escape", "e", "h", "i", "q", "j", "m", "p", "r", "tab", "v"];
+const gameClockDebugKeys = ["[", "]", "\\"];
 const verticalKeys = {
   arrowup: -1,
   w: -1,
@@ -34,8 +37,11 @@ function isPanelOverlayOpen() {
 export function initInput() {
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
-    if (handledKeys.includes(key)) event.preventDefault();
+    if (handledKeys.includes(key) || (isGameClockTimeScaleDebugEnabled() && gameClockDebugKeys.includes(key))) event.preventDefault();
     if (event.repeat && ["v", "e", "enter", " "].includes(key)) return;
+    if (event.repeat && gameClockDebugKeys.includes(key)) return;
+
+    if (handleGameClockTimeScaleDebugKey(key)) return;
 
     if (isCutsceneActive()) {
       handleCutsceneKey(key);
@@ -49,6 +55,17 @@ export function initInput() {
 
     if (isCharacterSelectionOpen()) {
       handleCharacterSelectionKey(key);
+      return;
+    }
+
+    if (isPhotoModeActive()) {
+      handlePhotoModeKey(key);
+      return;
+    }
+
+    if (isViewModeActive()) {
+      if (key === "p") togglePhotoMode();
+      else handleViewModeKey(key);
       return;
     }
 
@@ -113,11 +130,6 @@ export function initInput() {
         closeInfoModal();
         return;
       }
-      return;
-    }
-
-    if (isPhotoModeActive()) {
-      handlePhotoModeKey(key);
       return;
     }
 

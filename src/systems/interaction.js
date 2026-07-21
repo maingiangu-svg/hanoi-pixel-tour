@@ -65,6 +65,11 @@ import {
 } from "./chapter4.js";
 
 export function updateNearbyInteractable() {
+  if (runtime.viewMode?.active) {
+    runtime.nearbyInteractable = null;
+    ui.nearbyHint.classList.add("hidden");
+    return;
+  }
   if (isEnvironmentInteractionActive()) {
     if (runtime.photoMode?.active) {
       ui.nearbyHint.classList.add("hidden");

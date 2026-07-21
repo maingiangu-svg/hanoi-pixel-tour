@@ -6,6 +6,7 @@ import { closeAllOverlays } from "./modal.js";
 import { endEnvironmentInteraction, isEnvironmentInteractionActive } from "./environmentInteraction.js";
 import { closePhotoMode, isPhotoModeActive } from "./photoMode.js";
 import { pauseGameClock, resumeGameClock } from "./gameClock.js";
+import { exitViewMode, isViewModeActive } from "./viewMode.js";
 import {
   addMemoryClue,
   addStoryScore,
@@ -57,6 +58,7 @@ export function startCutscene(cutsceneId, options = {}) {
 
   closeAllOverlays();
   if (isPhotoModeActive()) closePhotoMode();
+  if (isViewModeActive()) exitViewMode();
   if (isEnvironmentInteractionActive()) endEnvironmentInteraction({ silent: true });
   clearGameplayKeys();
   runtime.nearbyInteractable = null;

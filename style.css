@@ -201,6 +201,18 @@ canvas {
   color: #fff8d6;
 }
 
+.time-scale-badge {
+  flex: 0 0 auto;
+  padding: 2px 3px;
+  border: 1px solid #151515;
+  background: #252532;
+  color: #fff2a6;
+  font-size: 6px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .hud-objective strong {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -237,6 +249,13 @@ canvas {
 
 .environment-focus .top-bar {
   opacity: 0.58;
+}
+
+.view-mode-active .top-bar,
+.view-mode-active .nearby-hint,
+.view-mode-active .vehicle-status,
+.view-mode-active .dialogue-box {
+  display: none !important;
 }
 
 .game-frame.is-cutscene .top-bar,

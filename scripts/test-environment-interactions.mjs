@@ -70,9 +70,10 @@ const {
   canUseEnvironmentInteraction,
   endEnvironmentInteraction,
   getActiveEnvironmentInteraction,
-  handleEnvironmentInteractionKey,
+  handleEnvironmentInteractable,
   startEnvironmentInteraction
 } = await import("../src/systems/environmentInteraction.js");
+const { exitViewMode, getActiveViewMode, handleViewModeKey, updateViewMode } = await import("../src/systems/viewMode.js");
 const { closePhotoMode, isPhotoModeActive } = await import("../src/systems/photoMode.js");
 const { endMoHangout, getMoCompanionNpc, updateMoCompanion } = await import("../src/systems/moCompanion.js");
 const { getPlayerMoveSpeed, isRidingVehicle, isWalkingBike, toggleVehicle } = await import("../src/systems/vehicle.js");
@@ -130,18 +131,25 @@ state.weather.intensity = 0;
 
 player.x = lakeView.x - 12;
 player.y = lakeView.y - 16;
-assert.equal(startEnvironmentInteraction(lakeView), true, "Viewpoint Hồ Gươm phải hoạt động");
-handleEnvironmentInteractionKey("p");
+assert.equal(handleEnvironmentInteractable(lakeView), true, "Viewpoint Hồ Gươm phải mở view mode");
+assert.equal(getActiveViewMode()?.viewpointId, "view-ho-guom");
+handleViewModeKey("d");
+updateViewMode(performance.now() + 100);
+assert(getActiveViewMode().yaw > 0, "D phải pan góc nhìn sang phải");
+const { openPhotoMode } = await import("../src/systems/photoMode.js");
+openPhotoMode();
 assert.equal(isPhotoModeActive(), true, "P tại viewpoint phải mở photo mode hiện có");
 closePhotoMode();
-endEnvironmentInteraction({ silent: true });
+exitViewMode();
 
 state.currentMapId = "longBien";
 const bridgeView = getEnvironmentInteractionsForMap("longBien").find((entry) => entry.id === "view-cau-long-bien");
+const railView = getEnvironmentInteractionsForMap("longBien").find((entry) => entry.id === "view-duong-ray-long-bien");
 state.randomEvents.active.longBienTrainPass = {
   eventId: "longBienTrainPass", mapId: "longBien", startedAt: 0, endsAt: 99999, state: "active", phase: "passing"
 };
-assert.equal(canUseEnvironmentInteraction(bridgeView).allowed, false, "Viewpoint gần ray phải khóa khi tàu chạy");
+assert.equal(canUseEnvironmentInteraction(bridgeView).allowed, true, "Viewpoint cầu phải cho xem tàu từ khoảng cách an toàn");
+assert.equal(canUseEnvironmentInteraction(railView).allowed, false, "Viewpoint sát ray phải khóa khi tàu chạy");
 delete state.randomEvents.active.longBienTrainPass;
 
 state.currentMapId = "hoanKiem";
@@ -163,4 +171,4 @@ assert.equal(normalized.vehicle.equipped, true);
 assert.deepEqual(runtimeConsoleIssues, [], "Environment runtime không được ghi lỗi hoặc cảnh báo console");
 console.error = originalConsoleError;
 console.warn = originalConsoleWarn;
-process.stdout.write("Environment interactions: OK (seat, occupancy, weather, viewpoint/photo, train lock, walking-bike, save)\n");
+process.stdout.write("Environment interactions: OK (seat, occupancy, weather, panorama/photo, safe train view, walking-bike, save)\n");

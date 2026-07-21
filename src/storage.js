@@ -11,6 +11,7 @@ import { BRANCHING_OUTCOMES, branchingQuests } from "./data/branchingQuests.js";
 import { RANDOM_EVENT_IDS, randomEventsById } from "./data/randomEvents.js";
 import { isOverlayOpen, showMessage } from "./systems/modal.js";
 import { normalizeStoryState } from "./data/storyState.js";
+import { viewpointsById } from "./data/viewpoints.js";
 
 let afterSaveHandler = () => {};
 export function setAfterSaveHandler(handler) { afterSaveHandler = handler; }
@@ -228,6 +229,9 @@ function normalizePhotoAlbum(rawAlbum, fallback) {
       mapId: spot.mapId,
       playerGender: ["male", "female"].includes(photo.playerGender) ? photo.playerGender : null,
       withMo: Boolean(photo.withMo),
+      viewpointId: viewpointsById[photo.viewpointId]?.photoSpotId === spotId ? photo.viewpointId : null,
+      yaw: Number.isFinite(Number(photo.yaw)) ? Math.round(Number(photo.yaw)) : 0,
+      pitch: Number.isFinite(Number(photo.pitch)) ? Math.round(Number(photo.pitch)) : 0,
       eventId: RANDOM_EVENT_IDS.has(photo.eventId) ? photo.eventId : null,
       eventTags: Array.isArray(photo.eventTags)
         ? Array.from(new Set(photo.eventTags.filter((tag) => typeof tag === "string"))).slice(0, 8)
@@ -320,7 +324,9 @@ function normalizeParkedAt(rawParkedAt) {
 }
 
 export function saveGame() {
-  const interactionOrigin = runtime.environmentInteraction?.active
+  const interactionOrigin = runtime.viewMode?.active
+    ? runtime.viewMode.origin
+    : runtime.environmentInteraction?.active
     ? runtime.environmentInteraction.origin
     : null;
   state.player.x = Math.round(interactionOrigin?.x ?? player.x);

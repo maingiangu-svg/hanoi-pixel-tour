@@ -19,6 +19,7 @@ export const ui = {
   hudMapName: document.getElementById("hudMapName"),
   hudClock: document.getElementById("hudClock"),
   hudWeather: document.getElementById("hudWeather"),
+  hudTimeScale: document.getElementById("hudTimeScale"),
   hudObjective: document.getElementById("hudObjective"),
   vehicleStatus: document.getElementById("vehicleStatus"),
   nearbyHint: document.getElementById("nearbyHint"),
@@ -148,6 +149,7 @@ export const runtime = {
   lastSavedAt: 0,
   lastGameClockTimestamp: null,
   lastClockDisplay: "",
+  gameClockTimeScale: 1,
   mapTransitionStartedAt: 0,
   scheduledMo: null,
   churchService: null,
@@ -179,6 +181,20 @@ export const runtime = {
     cameraFocus: null,
     companionPose: null,
     statusText: ""
+  },
+  viewMode: {
+    active: false,
+    viewpointId: null,
+    profile: null,
+    interaction: null,
+    origin: null,
+    yaw: 0,
+    pitch: 0,
+    targetYaw: 0,
+    targetPitch: 0,
+    openedAt: 0,
+    lastTimestamp: 0,
+    elapsedMs: 0
   },
   navigation: {
     resolvedObjective: null,

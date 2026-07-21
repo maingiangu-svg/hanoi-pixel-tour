@@ -37,11 +37,18 @@ import { drawChapter2CutsceneBackdrop, drawChapter2CutsceneForeground, drawChapt
 import { drawChapter3CutsceneBackdrop, drawChapter3Story } from "./renderChapter3.js";
 import { drawChapter4CutsceneBackdrop, drawChapter4Story } from "./renderChapter4.js";
 import { drawFinalEndingBackdrop } from "./renderFinalEnding.js";
+import { drawViewModeScene } from "./renderViewMode.js";
 
 export function drawGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (drawImmortalIntroScene()) {
     drawCutsceneOverlay();
+    return;
+  }
+
+  if (drawViewModeScene()) {
+    drawPhotoModeOverlay();
+    drawMapTransition();
     return;
   }
 

@@ -3,19 +3,8 @@ import { saveGameThrottled } from "../storage.js";
 import { advanceGameTime, formatGameTimeHud } from "../utils/gameTime.js";
 
 const MAX_CLOCK_DELTA_SECONDS = 2;
-
-/**
- * Tốc độ thời gian trong game:
- *
- * 1  = 1 giây thật tương đương 1 phút game
- * 10 = 6 giây thật tương đương 1 giờ game
- * 30 = 2 giây thật tương đương 1 giờ game
- * 60 = 1 giây thật tương đương 1 giờ game
- *
- * Đang đặt 60 để test nhanh lịch trình NPC Mơ.
- * Test xong hãy đổi lại thành 1.
- */
-const GAME_TIME_SPEED = 1;
+export const ENABLE_GAME_CLOCK_TIME_SCALE_DEBUG = true;
+export const GAME_CLOCK_TIME_SCALES = Object.freeze([1, 5, 15, 60]);
 let initialized = false;
 
 export function initGameClock() {
@@ -24,6 +13,8 @@ export function initGameClock() {
   }
 
   initialized = true;
+  runtime.gameClockTimeScale = normalizeTimeScale(runtime.gameClockTimeScale);
+  refreshTimeScaleHud();
 
   document.addEventListener("visibilitychange", () => {
     // Bỏ mốc thời gian frame trước khi chuyển trạng thái tab.
@@ -57,7 +48,7 @@ export function updateGameClock(timestamp) {
 
   // Chỉ nhân lượng thời gian truyền vào hệ thống đồng hồ.
   // Không thay đổi trực tiếp state, HUD hoặc cấu trúc save.
-  const scaledElapsedSeconds = elapsedSeconds * GAME_TIME_SPEED;
+  const scaledElapsedSeconds = elapsedSeconds * getGameClockTimeScale();
 
   advanceGameTime(state.gameTime, scaledElapsedSeconds);
 
@@ -107,6 +98,59 @@ export function isGameClockPaused() {
   return getPauseReasons().length > 0;
 }
 
+export function isGameClockTimeScaleDebugEnabled() {
+  return ENABLE_GAME_CLOCK_TIME_SCALE_DEBUG;
+}
+
+export function getGameClockTimeScale() {
+  if (!ENABLE_GAME_CLOCK_TIME_SCALE_DEBUG) return 1;
+  runtime.gameClockTimeScale = normalizeTimeScale(runtime.gameClockTimeScale);
+  return runtime.gameClockTimeScale;
+}
+
+export function setGameClockTimeScale(scale) {
+  if (!ENABLE_GAME_CLOCK_TIME_SCALE_DEBUG) return false;
+  const nextScale = normalizeTimeScale(scale);
+  if (nextScale === runtime.gameClockTimeScale) {
+    refreshTimeScaleHud();
+    return false;
+  }
+  runtime.gameClockTimeScale = nextScale;
+  refreshTimeScaleHud();
+  return true;
+}
+
+export function changeGameClockTimeScale(direction) {
+  if (!ENABLE_GAME_CLOCK_TIME_SCALE_DEBUG) return false;
+  const currentIndex = GAME_CLOCK_TIME_SCALES.indexOf(getGameClockTimeScale());
+  const nextIndex = Math.max(0, Math.min(
+    GAME_CLOCK_TIME_SCALES.length - 1,
+    currentIndex + Math.sign(Number(direction) || 0)
+  ));
+  return setGameClockTimeScale(GAME_CLOCK_TIME_SCALES[nextIndex]);
+}
+
+export function resetGameClockTimeScale() {
+  return setGameClockTimeScale(1);
+}
+
+export function handleGameClockTimeScaleDebugKey(key) {
+  if (!ENABLE_GAME_CLOCK_TIME_SCALE_DEBUG) return false;
+  if (key === "[") {
+    changeGameClockTimeScale(-1);
+    return true;
+  }
+  if (key === "]") {
+    changeGameClockTimeScale(1);
+    return true;
+  }
+  if (key === "\\") {
+    resetGameClockTimeScale();
+    return true;
+  }
+  return false;
+}
+
 function getPauseReasons() {
   if (!Array.isArray(state.gameTime.pauseReasons)) {
     state.gameTime.pauseReasons = [];
@@ -120,6 +164,17 @@ function refreshClockHud() {
   if (ui.hudClock) {
     ui.hudClock.textContent = formatGameTimeHud(state.gameTime);
   }
+}
+
+function refreshTimeScaleHud() {
+  if (!ui.hudTimeScale) return;
+  ui.hudTimeScale.textContent = `Time x${getGameClockTimeScale()}`;
+  ui.hudTimeScale.classList.toggle("hidden", !ENABLE_GAME_CLOCK_TIME_SCALE_DEBUG);
+}
+
+function normalizeTimeScale(scale) {
+  const numericScale = Number(scale);
+  return GAME_CLOCK_TIME_SCALES.includes(numericScale) ? numericScale : 1;
 }
 
 export function resetGameClockFrame(timestamp = null) {

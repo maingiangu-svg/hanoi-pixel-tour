@@ -149,7 +149,7 @@ try {
   await evaluate(`(async () => { const { player } = await import("./src/state.js"); player.x = 1214; player.y = 1004; })()`);
   await delay(180);
   await press("e", "KeyE");
-  assert.equal(await evaluate(`(async () => (await import("./src/systems/environmentInteraction.js")).getActiveEnvironmentInteraction()?.id)()`), "view-ho-guom");
+  assert.equal(await evaluate(`(async () => (await import("./src/systems/viewMode.js")).getActiveViewMode()?.viewpointId)()`), "view-ho-guom");
   await press("p", "KeyP");
   assert.equal(await evaluate(`(async () => (await import("./src/systems/photoMode.js")).isPhotoModeActive())()`), true);
   const viewpointPhoto = await screenshot("02-viewpoint-photo-mode");
@@ -203,16 +203,23 @@ try {
       cooldowns: {}, completedFlags: {}
     }
   });
-  const bridgeLocked = await evaluate(`(async () => {
+  const bridgeAccess = await evaluate(`(async () => {
     const { getEnvironmentInteractionsForMap } = await import("./src/data/environmentInteractions.js");
     const { canUseEnvironmentInteraction } = await import("./src/systems/environmentInteraction.js");
-    return canUseEnvironmentInteraction(getEnvironmentInteractionsForMap("longBien").find((item) => item.id === "view-cau-long-bien"));
+    const points = getEnvironmentInteractionsForMap("longBien");
+    return {
+      bridge: canUseEnvironmentInteraction(points.find((item) => item.id === "view-cau-long-bien")),
+      rail: canUseEnvironmentInteraction(points.find((item) => item.id === "view-duong-ray-long-bien"))
+    };
   })()`);
-  assert.equal(bridgeLocked.allowed, false);
-  const trainLock = await screenshot("06-train-viewpoint-locked");
+  assert.equal(bridgeAccess.bridge.allowed, true);
+  assert.equal(bridgeAccess.rail.allowed, false);
+  await press("e", "KeyE");
+  assert.equal(await evaluate(`(async () => (await import("./src/systems/viewMode.js")).isViewModeActive())()`), true);
+  const trainView = await screenshot("06-train-panorama");
 
   assert.deepEqual(errors, [], "Browser console không được có runtime error");
-  process.stdout.write(`${JSON.stringify({ seated, viewpointPhoto, churchSeat, tea, walkingBike, trainLock }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ seated, viewpointPhoto, churchSeat, tea, walkingBike, trainView }, null, 2)}\n`);
   process.stdout.write("Environment browser smoke: OK\n");
 } finally {
   if (socket?.readyState === WebSocket.OPEN) socket.close();

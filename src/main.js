@@ -34,6 +34,7 @@ import { hydrateChapter2, initChapter2, updateChapter2 } from "./systems/chapter
 import { hydrateChapter3, initChapter3, updateChapter3 } from "./systems/chapter3.js";
 import { hydrateChapter4, initChapter4, updateChapter4 } from "./systems/chapter4.js";
 import { hydrateFinalEnding, initFinalEnding, updateFinalEnding } from "./systems/finalEnding.js";
+import { hydrateViewMode, isViewModeActive, updateViewMode } from "./systems/viewMode.js";
 
 function gameLoop(timestamp) {
   updateCutscene(timestamp);
@@ -49,13 +50,14 @@ function gameLoop(timestamp) {
   updateChapter4();
   updateAreaAmbience(timestamp);
   updateEnvironmentInteraction(timestamp);
-  const gameplayCutsceneActive = isCutsceneActive();
-  if (!gameplayCutsceneActive) movePlayer();
+  updateViewMode(timestamp);
+  const gameplayLocked = isCutsceneActive() || isViewModeActive();
+  if (!gameplayLocked) movePlayer();
   updateBranchingQuests();
   updateTrackedObjective();
   updateNpcReactions(timestamp);
   updateCamera();
-  if (!gameplayCutsceneActive) {
+  if (!gameplayLocked) {
     updatePhotoSpotDiscovery(timestamp);
     updateNearbyInteractable();
   }
@@ -86,6 +88,7 @@ function bootGame() {
   player.x = state.player.x;
   player.y = state.player.y;
   hydrateEnvironmentInteraction();
+  hydrateViewMode();
   hydrateBranchingQuests();
   hydrateRandomEvents();
   hydrateChapter1();

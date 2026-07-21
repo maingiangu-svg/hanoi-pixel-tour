@@ -13,6 +13,8 @@ import { isEventActive } from "./randomEvents.js";
 import { isRidingVehicle, isWalkingBike } from "./vehicle.js";
 import { getWeatherType } from "./weather.js";
 import { getActiveMapNpcs } from "./worldSchedule.js";
+import { getViewpointById } from "../data/viewpoints.js";
+import { enterViewMode } from "./viewMode.js";
 
 const TEA_PRICE = foodCatalog.traDa.price;
 const MOVEMENT_KEYS = new Set(["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"]);
@@ -43,7 +45,7 @@ export function isEnvironmentInteractionActive() {
 }
 
 export function isEnvironmentMovementLocked() {
-  return isEnvironmentInteractionActive();
+  return isEnvironmentInteractionActive() || Boolean(runtime.viewMode?.active);
 }
 
 export function getActiveEnvironmentInteraction() {
@@ -90,6 +92,18 @@ export function handleEnvironmentInteractable(interaction) {
   if (interaction.type === "vehicleWalkZone") {
     openVehicleWalkMenu(interaction);
     return true;
+  }
+  if (isViewType(interaction.type) && getViewpointById(interaction.id)) {
+    const check = canUseEnvironmentInteraction(interaction);
+    if (!check.allowed) {
+      showMessage(check.message);
+      return false;
+    }
+    if (isRidingVehicle()) {
+      showMessage("Nhấn V để xuống xe trước khi ngắm cảnh.");
+      return false;
+    }
+    return enterViewMode(interaction.id);
   }
   return startEnvironmentInteraction(interaction);
 }

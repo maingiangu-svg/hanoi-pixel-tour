@@ -12,6 +12,7 @@ import { checkSideQuests } from "./questSystem.js";
 import { isRidingVehicle } from "./vehicle.js";
 import { getWeatherType } from "./weather.js";
 import { getPhotoEventForSpot, markPhotoEventCaptured } from "./randomEvents.js";
+import { getActiveViewMode, getViewModePhotoMetadata } from "./viewMode.js";
 
 const PHOTO_CLOCK_PAUSE_REASON = "photo-mode";
 const DISCOVERY_CHECK_INTERVAL = 180;
@@ -116,6 +117,22 @@ export function evaluatePhotoComposition(spot = getNearestPhotoSpot({ withinInte
   const distance = distanceToSpot(center, spot);
   if (distance > spot.radius) {
     return { valid: false, rating: 0, reason: "Hãy đứng đúng vị trí." };
+  }
+  const activeView = getActiveViewMode();
+  if (activeView) {
+    if (activeView.profile.photoSpotId !== spot.id) {
+      return { valid: false, rating: 0, reason: "Hãy ngắm đúng địa điểm trước khi chụp." };
+    }
+    const yawRatio = Math.abs(activeView.yaw) / Math.max(1, activeView.profile.yawLimit);
+    const pitchRatio = Math.abs(activeView.pitch) / Math.max(1, activeView.profile.pitchLimit);
+    const rating = yawRatio <= 0.28 && pitchRatio <= 0.45 ? 3 : yawRatio <= 0.72 ? 2 : 1;
+    return {
+      valid: true,
+      rating,
+      ratingLabel: getPhotoRatingLabel(rating),
+      distance,
+      viewpointId: activeView.viewpointId
+    };
   }
   if (player.facing !== spot.requiredFacing) {
     return { valid: false, rating: 0, reason: "Hãy quay về phía landmark." };
@@ -256,6 +273,7 @@ function createPhotoMetadata(spot, rating) {
   const hours = Math.floor(minuteOfDay / 60);
   const minutes = minuteOfDay % 60;
   const eventMetadata = getPhotoEventForSpot(spot.id, spot.mapId);
+  const viewpointMetadata = getViewModePhotoMetadata();
   return {
     photoSpotId: spot.id,
     landmarkId: spot.landmarkId,
@@ -268,6 +286,9 @@ function createPhotoMetadata(spot, rating) {
     mapId: spot.mapId,
     playerGender: state.profile?.gender || null,
     withMo: isMoCompanionActive(),
+    viewpointId: viewpointMetadata?.viewpointId || null,
+    yaw: viewpointMetadata?.yaw || 0,
+    pitch: viewpointMetadata?.pitch || 0,
     eventId: eventMetadata?.eventId || null,
     eventTags: eventMetadata?.eventTags || [],
     capturedAt: new Date().toISOString()
