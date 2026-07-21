@@ -4,6 +4,7 @@ import { getEventProgress, isEventActive } from "../systems/randomEvents.js";
 import { isMoCompanionActive } from "../systems/moCompanion.js";
 import { getActiveViewMode } from "../systems/viewMode.js";
 import { getSurfaceWetness, getWeatherCloudiness, getWeatherIntensity, getWeatherType } from "../systems/weather.js";
+import { drawHoGuomPanorama } from "./renderHoGuomPanorama.js";
 
 const DAY_SKY = Object.freeze(["#b9d7dc", "#9fc5d1", "#83afbd"]);
 const AFTERNOON_SKY = Object.freeze(["#e7c694", "#d7a878", "#b9856d"]);
@@ -28,24 +29,41 @@ export function drawViewModeScene() {
   const pan = Math.round((view.yaw / view.profile.yawLimit) * width * 0.15 * fovScale);
   const horizon = Math.round(height * 0.43 + (view.pitch / view.profile.pitchLimit) * height * 0.075);
   const time = performance.now();
+  const weatherType = getWeatherType();
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  drawSky(width, height, horizon, hour, night, cloudiness, pan, time);
 
   if (view.profile.sceneType === "lake") {
-    drawLakeScene(view.profile.variant, width, height, horizon, pan, night, wetness, time, hour, crowdFactor);
+    drawHoGuomPanorama(
+      view.profile.variant,
+      width,
+      height,
+      horizon,
+      pan,
+      wetness,
+      time,
+      hour,
+      crowdFactor,
+      cloudiness,
+      weatherIntensity,
+      weatherType
+    );
   } else if (view.profile.sceneType === "cathedral") {
+    drawSky(width, height, horizon, hour, night, cloudiness, pan, time);
     drawCathedralScene(width, height, horizon, pan, night, wetness, hour, time, crowdFactor);
   } else if (view.profile.sceneType === "baDinh") {
+    drawSky(width, height, horizon, hour, night, cloudiness, pan, time);
     drawBaDinhScene(view.profile.variant, width, height, horizon, pan, night, wetness, time, crowdFactor);
   } else if (view.profile.sceneType === "temple") {
+    drawSky(width, height, horizon, hour, night, cloudiness, pan, time);
     drawTempleScene(view.profile.variant, width, height, horizon, pan, night, wetness, time, crowdFactor);
   } else if (view.profile.sceneType === "longBien") {
+    drawSky(width, height, horizon, hour, night, cloudiness, pan, time);
     drawLongBienScene(view.profile.variant, width, height, horizon, pan, night, wetness, time);
   }
 
-  drawWeatherOverlay(width, height, cloudiness, weatherIntensity, getWeatherType(), time);
+  drawWeatherOverlay(width, height, cloudiness, weatherIntensity, weatherType, time, view.profile.sceneType === "lake");
   drawCompanion(view, width, height, night, time);
   if (!runtime.photoMode?.active) drawViewInterface(view, width, height, time);
   ctx.restore();
@@ -95,139 +113,6 @@ function drawNightDots(width, horizon, pan, night) {
     const y = 24 + mod(index * 47, Math.max(30, horizon - 90));
     ctx.fillRect(Math.round(x), Math.round(y), index % 4 === 0 ? 2 : 1, 1);
   }
-}
-
-function drawLakeScene(variant, width, height, horizon, pan, night, wetness, time, hour, crowdFactor) {
-  drawLakeSkyline(width, horizon, pan * 0.36, night);
-  drawLakeWater(width, height, horizon, pan, night, time);
-
-  if (variant === "tower") {
-    drawTurtleTower(width * 0.52 - pan * 0.76, horizon + 45, 2.05, night);
-  } else if (variant === "redBridge") {
-    drawTempleIsland(width * 0.79 - pan * 0.54, horizon + 10, night);
-    drawTheHucBridge(width * 0.1 - pan * 0.92, horizon + 94, width * 0.82, night);
-  } else {
-    drawTurtleTower(width * 0.64 - pan * 0.67, horizon + 20, 1.38, night);
-    drawTheHucBridge(width * 0.72 - pan * 0.46, horizon + 78, width * 0.34, night);
-  }
-
-  drawLakePromenade(width, height, horizon, pan, night, wetness, time, variant, hour, crowdFactor);
-}
-
-function drawLakeSkyline(width, horizon, pan, night) {
-  ctx.fillStyle = night > 0.45 ? "#28313d" : "#677b78";
-  ctx.fillRect(0, horizon - 78, width, 80);
-  for (let index = -1; index < 14; index += 1) {
-    const x = Math.round(index * 104 + pan);
-    const buildingHeight = 36 + mod(index * 29, 58);
-    const buildingWidth = 72 + mod(index * 17, 35);
-    ctx.fillStyle = index % 3 === 0 ? "#6e6a61" : index % 3 === 1 ? "#766e61" : "#5d6968";
-    ctx.fillRect(x, horizon - buildingHeight, buildingWidth, buildingHeight);
-    if (night > 0.25) {
-      ctx.fillStyle = `rgba(255, 212, 122, ${0.22 + night * 0.48})`;
-      for (let wx = x + 12; wx < x + buildingWidth - 9; wx += 22) {
-        if (mod(wx + index, 3) !== 0) ctx.fillRect(wx, horizon - buildingHeight + 13, 8, 6);
-      }
-    }
-  }
-  drawTreeLine(width, horizon - 22, pan * 0.65, night, 0.75);
-}
-
-function drawLakeWater(width, height, horizon, pan, night, time) {
-  ctx.fillStyle = night > 0.42 ? "#244454" : "#477f88";
-  ctx.fillRect(0, horizon, width, height - horizon);
-  const tick = Math.floor(time / 160);
-  for (let row = 0; row < 15; row += 1) {
-    const y = horizon + 14 + row * 21;
-    const segment = 34 + row * 5;
-    for (let x = -segment; x < width + segment; x += segment * 2) {
-      const offset = mod(tick * (row % 2 ? 2 : -1) + row * 37 + pan * 0.18, segment * 2);
-      ctx.fillStyle = row % 3 === 0
-        ? (night > 0.45 ? "rgba(111, 171, 180, 0.26)" : "rgba(199, 226, 211, 0.34)")
-        : "rgba(19, 63, 75, 0.18)";
-      ctx.fillRect(Math.round(x + offset), y, Math.round(segment * 0.72), row < 6 ? 2 : 3);
-    }
-  }
-  if (night > 0.22) {
-    for (let index = 0; index < 8; index += 1) {
-      const x = mod(90 + index * 179 - pan * 0.28, width);
-      const glow = 8 + index % 3 * 5;
-      ctx.fillStyle = `rgba(255, 202, 96, ${0.12 + night * 0.2})`;
-      ctx.fillRect(Math.round(x), horizon + 20, glow, 4);
-      ctx.fillRect(Math.round(x + 3), horizon + 29, Math.max(3, glow - 6), 22 + index % 4 * 8);
-    }
-  }
-}
-
-function drawTurtleTower(x, baseY, scale, night) {
-  const px = Math.round(x);
-  const unit = Math.max(2, Math.round(scale * 4));
-  ctx.fillStyle = "rgba(25, 42, 43, 0.25)";
-  ctx.fillRect(px - unit * 10, baseY + unit * 5, unit * 20, unit * 2);
-  ctx.fillStyle = night > 0.5 ? "#b7a273" : "#c7b890";
-  ctx.fillRect(px - unit * 6, baseY - unit * 8, unit * 12, unit * 12);
-  ctx.fillStyle = "#6c705e";
-  ctx.fillRect(px - unit * 7, baseY - unit * 9, unit * 14, unit * 2);
-  ctx.fillRect(px - unit * 5, baseY - unit * 15, unit * 10, unit * 7);
-  ctx.fillStyle = "#4c5149";
-  ctx.fillRect(px - unit * 6, baseY - unit * 16, unit * 12, unit * 2);
-  ctx.fillRect(px - unit * 3, baseY - unit * 20, unit * 6, unit * 5);
-  ctx.fillStyle = night > 0.25 ? "#f4c96f" : "#30474a";
-  ctx.fillRect(px - unit * 3, baseY - unit * 12, unit * 2, unit * 3);
-  ctx.fillRect(px + unit, baseY - unit * 12, unit * 2, unit * 3);
-  ctx.fillRect(px - unit * 2, baseY - unit * 5, unit * 4, unit * 5);
-}
-
-function drawTheHucBridge(x, y, length, night) {
-  const startX = Math.round(x);
-  const endX = Math.round(x + length);
-  ctx.strokeStyle = "#6e2027";
-  ctx.lineWidth = 11;
-  ctx.beginPath();
-  ctx.moveTo(startX, y + 22);
-  ctx.quadraticCurveTo((startX + endX) / 2, y - 10, endX, y + 8);
-  ctx.stroke();
-  ctx.strokeStyle = "#d94b42";
-  ctx.lineWidth = 6;
-  ctx.stroke();
-  for (let index = 0; index <= 12; index += 1) {
-    const ratio = index / 12;
-    const px = startX + length * ratio;
-    const py = y + 22 - Math.sin(ratio * Math.PI) * 27 - ratio * 14;
-    ctx.fillStyle = "#a62f31";
-    ctx.fillRect(Math.round(px), Math.round(py - 17), 4, 20);
-    if (night > 0.28 && index % 3 === 0) {
-      ctx.fillStyle = `rgba(255, 214, 115, ${0.45 + night * 0.35})`;
-      ctx.fillRect(Math.round(px - 2), Math.round(py - 20), 7, 4);
-    }
-  }
-}
-
-function drawTempleIsland(x, y, night) {
-  drawTreeCanopy(x, y - 18, 1.5, night);
-  ctx.fillStyle = "#774638";
-  ctx.fillRect(Math.round(x - 48), y, 96, 28);
-  ctx.fillStyle = night > 0.4 ? "#e6b966" : "#c89b58";
-  ctx.fillRect(Math.round(x - 34), y + 8, 68, 16);
-  ctx.fillStyle = "#552e2d";
-  ctx.fillRect(Math.round(x - 56), y - 4, 112, 8);
-}
-
-function drawLakePromenade(width, height, horizon, pan, night, wetness, time, variant, hour, crowdFactor) {
-  if (variant === "tower") return;
-  const top = Math.round(height * 0.79);
-  ctx.fillStyle = "#73756e";
-  ctx.fillRect(0, top, width, height - top);
-  ctx.fillStyle = "#a89f8c";
-  ctx.fillRect(0, top, width, 13);
-  for (let y = top + 24; y < height; y += 26) {
-    ctx.fillStyle = y % 52 === 0 ? "#686a64" : "#7d7c73";
-    ctx.fillRect(0, y, width, 2);
-  }
-  drawRailing(0, top - 24, width, night);
-  const baseCount = hour >= 16 && hour < 22 ? 9 : hour >= 22 || hour < 5 ? 3 : 6;
-  drawPeopleRow(width, top + 20, pan * 0.26, night, time, scaledCount(baseCount, crowdFactor));
-  if (wetness > 0.22) drawWetGroundReflections(width, top + 12, height, wetness, night, time);
 }
 
 function drawCathedralScene(width, height, horizon, pan, night, wetness, hour, time, crowdFactor) {
@@ -700,16 +585,18 @@ function drawWetGroundReflections(width, top, height, wetness, night, time) {
   }
 }
 
-function drawWeatherOverlay(width, height, cloudiness, intensity, type, time) {
+function drawWeatherOverlay(width, height, cloudiness, intensity, type, time, preserveLandmark = false) {
   if (cloudiness > 0.18) {
     ctx.fillStyle = `rgba(37, 48, 59, ${cloudiness * 0.08})`;
     ctx.fillRect(0, 0, width, height);
   }
   if (intensity <= 0.035) return;
 
-  const count = type === "heavyRain" ? 150 : type === "rain" ? 92 : 42;
+  const count = type === "heavyRain" ? (preserveLandmark ? 118 : 150) : type === "rain" ? (preserveLandmark ? 76 : 92) : 42;
   const tick = time * (type === "heavyRain" ? 0.48 : type === "rain" ? 0.34 : 0.21);
-  ctx.fillStyle = type === "heavyRain" ? "rgba(207, 227, 237, 0.62)" : "rgba(214, 231, 236, 0.48)";
+  ctx.fillStyle = type === "heavyRain"
+    ? (preserveLandmark ? "rgba(207, 227, 237, 0.5)" : "rgba(207, 227, 237, 0.62)")
+    : "rgba(214, 231, 236, 0.48)";
   for (let index = 0; index < count; index += 1) {
     const x = mod(index * 83 + tick * 0.55, width + 60) - 30;
     const y = mod(index * 127 + tick, height + 50) - 25;
@@ -725,6 +612,10 @@ function drawWeatherOverlay(width, height, cloudiness, intensity, type, time) {
 
 function drawCompanion(view, width, height, night, time) {
   if (!isMoCompanionActive()) return;
+  if (view.profile.sceneType === "lake") {
+    drawLakeCompanion(view, width, height, night, time);
+    return;
+  }
   const x = Math.round(width * 0.84 + view.yaw * 0.55);
   const y = Math.round(height * 0.72);
   const bob = Math.round(Math.sin(time / 620) * 1.2);
@@ -741,6 +632,31 @@ function drawCompanion(view, width, height, night, time) {
   ctx.fillStyle = "#2f2b2e";
   ctx.fillRect(x - 12, y + 25 + bob, 5, 4);
   ctx.fillRect(x + 9, y + 25 + bob, 5, 4);
+
+  if (view.elapsedMs > 900 && view.elapsedMs < 6500 && !runtime.photoMode?.active) {
+    const alpha = Math.min(1, (view.elapsedMs - 900) / 350, (6500 - view.elapsedMs) / 450);
+    drawCompanionCaption(view.profile.companionLine, width, height, alpha);
+  }
+}
+
+function drawLakeCompanion(view, width, height, night, time) {
+  const x = Math.round(width * 0.88 + view.yaw * 0.16);
+  const y = Math.round(height * 0.77);
+  const bob = Math.round(Math.sin(time / 720) * 1.1);
+  ctx.fillStyle = "rgba(12, 17, 19, 0.3)";
+  ctx.fillRect(x - 34, y + 112, 76, 9);
+  ctx.fillStyle = night > 0.55 ? "#533944" : "#94566a";
+  ctx.fillRect(x - 23, y + 46 + bob, 52, 68);
+  ctx.fillStyle = "#33292c";
+  ctx.fillRect(x - 28, y + 4 + bob, 61, 49);
+  ctx.fillRect(x - 34, y + 27 + bob, 11, 55);
+  ctx.fillRect(x + 28, y + 27 + bob, 11, 55);
+  ctx.fillStyle = night > 0.55 ? "#ad8068" : "#dbab86";
+  ctx.fillRect(x - 17, y + 18 + bob, 36, 28);
+  ctx.fillStyle = "#263139";
+  ctx.fillRect(x - 13, y + 58 + bob, 23, 4);
+  ctx.fillStyle = "#cbd9db";
+  ctx.fillRect(x - 9, y + 51 + bob, 14, 10);
 
   if (view.elapsedMs > 900 && view.elapsedMs < 6500 && !runtime.photoMode?.active) {
     const alpha = Math.min(1, (view.elapsedMs - 900) / 350, (6500 - view.elapsedMs) / 450);
@@ -765,48 +681,63 @@ function drawCompanionCaption(text, width, height, alpha) {
 }
 
 function drawViewInterface(view, width, height, time) {
-  const pulse = 0.68 + Math.sin(time / 360) * 0.12;
+  const pulse = 0.48 + Math.sin(time / 420) * 0.1;
+  const displayWidth = canvas.getBoundingClientRect?.().width || canvas.clientWidth || width;
+  const compact = displayWidth < 720;
+  const uiScale = compact ? Math.min(3.2, width / Math.max(1, displayWidth)) : 1;
+  const topBandHeight = Math.round(28 * uiScale);
+  const bottomBandHeight = Math.round(34 * uiScale);
   ctx.fillStyle = "rgba(10, 13, 18, 0.26)";
-  ctx.fillRect(0, 0, width, 28);
-  ctx.fillRect(0, height - 34, width, 34);
+  ctx.fillRect(0, 0, width, topBandHeight);
+  ctx.fillRect(0, height - bottomBandHeight, width, bottomBandHeight);
 
-  drawFrameCorners(width, height);
+  drawFrameCorners(width, height, uiScale);
   const centerX = Math.round(width / 2);
   const centerY = Math.round(height / 2);
   ctx.globalAlpha = pulse;
   ctx.fillStyle = "#fff2bf";
-  ctx.fillRect(centerX - 10, centerY, 21, 2);
-  ctx.fillRect(centerX, centerY - 10, 2, 21);
+  ctx.fillRect(centerX - 1, centerY - 1, 3, 3);
   ctx.globalAlpha = 1;
 
-  const labelWidth = Math.min(520, Math.max(250, view.profile.label.length * 9 + 42));
+  const labelWidth = Math.min(
+    width - Math.round(64 * uiScale),
+    Math.round(520 * uiScale),
+    Math.max(Math.round((compact ? 170 : 250) * uiScale), Math.round((view.profile.label.length * 9 + 42) * uiScale))
+  );
   const labelX = Math.round((width - labelWidth) / 2);
+  const labelTop = Math.round((compact ? 12 : 18) * uiScale);
+  const labelHeight = Math.round(29 * uiScale);
   ctx.fillStyle = "rgba(15, 18, 22, 0.88)";
-  ctx.fillRect(labelX - 3, 18, labelWidth + 6, 35);
+  ctx.fillRect(labelX - Math.round(3 * uiScale), labelTop - Math.round(3 * uiScale), labelWidth + Math.round(6 * uiScale), labelHeight + Math.round(6 * uiScale));
   ctx.fillStyle = "#f2d78b";
-  ctx.fillRect(labelX, 21, labelWidth, 29);
+  ctx.fillRect(labelX, labelTop, labelWidth, labelHeight);
   ctx.fillStyle = "#17191c";
   ctx.textAlign = "center";
-  ctx.font = `900 14px ${PIXEL_FONT}`;
-  ctx.fillText(view.profile.label, width / 2, 40);
+  ctx.font = `900 ${Math.round(14 * uiScale)}px ${PIXEL_FONT}`;
+  ctx.fillText(view.profile.label, width / 2, labelTop + Math.round(19 * uiScale));
 
   ctx.fillStyle = "#f7efd6";
-  ctx.font = `700 11px ${PIXEL_FONT}`;
-  ctx.fillText("A/D hoặc ←/→: nhìn ngang · W/S: nhìn dọc · P: chụp · E/Esc: thoát", width / 2, height - 12);
+  ctx.font = `700 ${Math.round(12 * uiScale)}px ${PIXEL_FONT}`;
+  ctx.fillText(
+    compact ? "←/→ nhìn · P chụp · E thoát" : "A/D hoặc ←/→: nhìn ngang · W/S: nhìn dọc · P: chụp · E/Esc: thoát",
+    width / 2,
+    height - Math.round(12 * uiScale)
+  );
 }
 
-function drawFrameCorners(width, height) {
-  const inset = 18;
-  const length = 34;
+function drawFrameCorners(width, height, uiScale = 1) {
+  const inset = Math.round(18 * uiScale);
+  const length = Math.round(34 * uiScale);
+  const thickness = Math.max(3, Math.round(3 * uiScale));
   ctx.fillStyle = "rgba(255, 240, 186, 0.72)";
-  ctx.fillRect(inset, inset, length, 3);
-  ctx.fillRect(inset, inset, 3, length);
-  ctx.fillRect(width - inset - length, inset, length, 3);
-  ctx.fillRect(width - inset - 3, inset, 3, length);
-  ctx.fillRect(inset, height - inset - 3, length, 3);
-  ctx.fillRect(inset, height - inset - length, 3, length);
-  ctx.fillRect(width - inset - length, height - inset - 3, length, 3);
-  ctx.fillRect(width - inset - 3, height - inset - length, 3, length);
+  ctx.fillRect(inset, inset, length, thickness);
+  ctx.fillRect(inset, inset, thickness, length);
+  ctx.fillRect(width - inset - length, inset, length, thickness);
+  ctx.fillRect(width - inset - thickness, inset, thickness, length);
+  ctx.fillRect(inset, height - inset - thickness, length, thickness);
+  ctx.fillRect(inset, height - inset - length, thickness, length);
+  ctx.fillRect(width - inset - length, height - inset - thickness, length, thickness);
+  ctx.fillRect(width - inset - thickness, height - inset - length, thickness, length);
 }
 
 function drawPixelArch(centerX, baseY, halfWidth, height) {

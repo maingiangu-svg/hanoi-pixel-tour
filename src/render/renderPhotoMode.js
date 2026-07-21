@@ -9,6 +9,7 @@ import {
   hasCapturedPhotoSpot,
   isPhotoModeActive
 } from "../systems/photoMode.js";
+import { isViewModeActive } from "../systems/viewMode.js";
 
 export function drawPhotoSpots(map) {
   if (isPhotoModeActive()) {
@@ -107,14 +108,16 @@ function drawFrame() {
   drawCorner(inset, canvas.height - inset, corner, 1, -1);
   drawCorner(canvas.width - inset, canvas.height - inset, corner, -1, -1);
 
-  const cx = Math.round(canvas.width / 2);
-  const cy = Math.round(canvas.height / 2);
-  ctx.fillStyle = "rgba(21, 21, 21, 0.82)";
-  ctx.fillRect(cx - 15, cy - 1, 30, 3);
-  ctx.fillRect(cx - 1, cy - 15, 3, 30);
-  ctx.fillStyle = "#fff3b0";
-  ctx.fillRect(cx - 7, cy, 14, 1);
-  ctx.fillRect(cx, cy - 7, 1, 14);
+  if (!isViewModeActive()) {
+    const cx = Math.round(canvas.width / 2);
+    const cy = Math.round(canvas.height / 2);
+    ctx.fillStyle = "rgba(21, 21, 21, 0.82)";
+    ctx.fillRect(cx - 15, cy - 1, 30, 3);
+    ctx.fillRect(cx - 1, cy - 15, 3, 30);
+    ctx.fillStyle = "#fff3b0";
+    ctx.fillRect(cx - 7, cy, 14, 1);
+    ctx.fillRect(cx, cy - 7, 1, 14);
+  }
   ctx.restore();
 }
 

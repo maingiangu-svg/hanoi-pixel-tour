@@ -5,9 +5,9 @@ const DEFAULT_YAW_LIMIT = 44;
 const DEFAULT_PITCH_LIMIT = 12;
 
 const definitions = [
-  viewpoint("view-ho-guom", "photo-ho-guom", "lake", "shore", ["skyline", "lake", "turtleTower", "promenade"], "Đứng đây nhìn hồ đẹp thật."),
-  viewpoint("view-thap-rua", "photo-thap-rua", "lake", "tower", ["skyline", "lake", "turtleTower", "reflections"], "Tháp Rùa giữa mặt hồ trông thật yên bình."),
-  viewpoint("view-cau-the-huc", "photo-cau-the-huc", "lake", "redBridge", ["lake", "redBridge", "templeIsland", "promenade"], "Cầu đỏ nổi bật hẳn giữa màu nước hồ."),
+  viewpoint("view-ho-guom", "photo-ho-guom", "lake", "shore", ["skyline", "lake", "turtleTower", "promenade"], "Đứng đây nhìn hồ đẹp thật.", { label: "Hồ Gươm" }),
+  viewpoint("view-thap-rua", "photo-thap-rua", "lake", "tower", ["skyline", "lake", "turtleTower", "reflections"], "Tháp Rùa giữa mặt hồ trông thật yên bình.", { label: "Tháp Rùa" }),
+  viewpoint("view-cau-the-huc", "photo-cau-the-huc", "lake", "redBridge", ["lake", "redBridge", "templeIsland", "promenade"], "Cầu đỏ nổi bật hẳn giữa màu nước hồ.", { label: "Cầu Thê Húc" }),
   viewpoint("view-nha-tho-lon", "photo-nha-tho-lon", "cathedral", "facade", ["oldQuarter", "cathedral", "forecourt", "churchgoers"], "Buổi tối ở đây lúc nào cũng có người ghé qua."),
   viewpoint("view-ba-dinh", "photo-quang-truong-ba-dinh", "baDinh", "square", ["sky", "mausoleum", "flagRows", "square"], "Quảng trường rộng và trang nghiêm quá."),
   viewpoint("view-lang-bac", "photo-lang-bac", "baDinh", "mausoleum", ["treeLine", "mausoleum", "plannedLawns", "forecourt"], "Đứng gần mới thấy công trình thật vững chãi."),

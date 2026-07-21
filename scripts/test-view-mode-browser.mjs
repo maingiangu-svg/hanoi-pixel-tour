@@ -84,7 +84,7 @@ async function screenshot(name) {
   return path;
 }
 
-async function prepareView(viewpointId, { hour = 16, weather = "clear", intensity = 0, wetness = 0, withMo = false, train = false } = {}) {
+async function prepareView(viewpointId, { hour = 16, minute = 0, weather = "clear", intensity = 0, wetness = 0, withMo = false, train = false } = {}) {
   return evaluate(`(async () => {
     const { player, state } = await import("./src/state.js");
     const { viewpointsById } = await import("./src/data/viewpoints.js");
@@ -103,8 +103,8 @@ async function prepareView(viewpointId, { hour = 16, weather = "clear", intensit
     state.currentMapId = profile.mapId;
     state.gameTime.day = 2;
     state.gameTime.hour = ${hour};
-    state.gameTime.minute = 0;
-    state.gameTime.totalGameMinutes = 1440 + ${hour} * 60;
+    state.gameTime.minute = ${minute};
+    state.gameTime.totalGameMinutes = 1440 + ${hour} * 60 + ${minute};
     state.weather.type = ${JSON.stringify(weather)};
     state.weather.intensity = ${intensity};
     state.weather.surfaceWetness = ${wetness};
@@ -135,6 +135,30 @@ async function prepareView(viewpointId, { hour = 16, weather = "clear", intensit
   })()`);
 }
 
+async function getLakePixelAudit() {
+  return evaluate(`(async () => {
+    const { canvas, ctx } = await import("./src/state.js");
+    const { drawViewModeScene } = await import("./src/render/renderViewMode.js");
+    drawViewModeScene();
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let orangeSky = 0;
+    let warmWater = 0;
+    let redMidground = 0;
+    for (let y = 0; y < canvas.height; y += 2) {
+      for (let x = 0; x < canvas.width; x += 2) {
+        const index = (y * canvas.width + x) * 4;
+        const r = pixels[index];
+        const g = pixels[index + 1];
+        const b = pixels[index + 2];
+        if (y < canvas.height * 0.43 && r > 180 && g > 70 && g < 215 && b < 135) orangeSky += 1;
+        if (y > canvas.height * 0.43 && y < canvas.height * 0.82 && r > 150 && g > 82 && g < 220 && b < 125) warmWater += 1;
+        if (y > canvas.height * 0.43 && y < canvas.height * 0.76 && r > 110 && r > g * 1.42 && r > b * 1.28) redMidground += 1;
+      }
+    }
+    return { orangeSky, warmWater, redMidground };
+  })()`);
+}
+
 try {
   await connect();
   await send("Runtime.enable");
@@ -152,9 +176,12 @@ try {
   assert.equal(profileAudit.length, 10, "Phải có đủ 10 viewpoint bắt buộc");
   assert(profileAudit.every((entry) => entry.layers >= 4 && entry.fov >= 60 && entry.radius > 0));
 
-  assert.equal(await prepareView("view-ho-guom"), "view-ho-guom");
+  assert.equal(await prepareView("view-ho-guom", { hour: 17, minute: 30 }), "view-ho-guom");
   const lakeOrigin = await evaluate(`(async () => { const { runtime } = await import("./src/state.js"); return runtime.viewMode.origin; })()`);
-  const lake = await screenshot("01-ho-guom-day");
+  const lake = await screenshot("01-ho-guom-sunset");
+  const sunsetAudit = await getLakePixelAudit();
+  assert(sunsetAudit.orangeSky > 2500, "Hoàng hôn Hồ Gươm phải có bầu trời cam rõ");
+  assert(sunsetAudit.warmWater > 80, "Hoàng hôn phải có phản chiếu ấm trên mặt hồ");
   await press("d", "KeyD");
   await press("d", "KeyD");
   await press("ArrowUp", "ArrowUp");
@@ -166,21 +193,36 @@ try {
   assert.equal(exited.x, lakeOrigin.x);
   assert.equal(exited.y, lakeOrigin.y);
 
+  await prepareView("view-ho-guom", { hour: 17, minute: 30 });
+  const bridgeBeforePan = (await getLakePixelAudit()).redMidground;
+  for (let index = 0; index < 7; index += 1) await press("d", "KeyD");
+  await delay(260);
+  const bridgeAfterPan = (await getLakePixelAudit()).redMidground;
+  assert(bridgeAfterPan > bridgeBeforePan + 20, "Cầu Thê Húc chỉ được lộ rõ khi pan về đúng phía");
+  const lakePanRight = await screenshot("02-ho-guom-pan-right");
+
+  await prepareView("view-thap-rua", { hour: 20 });
+  const nightAudit = await getLakePixelAudit();
+  assert(nightAudit.warmWater > 160, "Ban đêm phải có Tháp Rùa và reflection vàng rõ");
+  const turtleTowerNight = await screenshot("03-thap-rua-night");
+
   await prepareView("view-nha-tho-lon", { hour: 10 });
-  const cathedralDay = await screenshot("02-cathedral-day");
+  const cathedralDay = await screenshot("04-cathedral-day");
   await prepareView("view-nha-tho-lon", { hour: 20, wetness: 0.35 });
-  const cathedralNight = await screenshot("03-cathedral-night");
+  const cathedralNight = await screenshot("05-cathedral-night");
 
   await prepareView("view-cau-long-bien", { hour: 19, train: true });
   assert.equal(await evaluate(`(async () => (await import("./src/systems/randomEvents.js")).isEventActive("longBienTrainPass"))()`), true);
-  const bridgeTrain = await screenshot("04-long-bien-train");
+  const bridgeTrain = await screenshot("06-long-bien-train");
 
   await prepareView("view-ho-guom", { hour: 20, weather: "heavyRain", intensity: 1, wetness: 0.9 });
-  const rainyLake = await screenshot("05-ho-guom-heavy-rain");
+  const rainyLake = await screenshot("07-ho-guom-heavy-rain");
+  const rainyNightAudit = await getLakePixelAudit();
+  assert(rainyNightAudit.warmWater > 90, "Mưa đêm vẫn phải giữ reflection đèn và Tháp Rùa dễ đọc");
 
   await prepareView("view-song-hong", { hour: 18, withMo: true });
   assert.equal(await evaluate(`(async () => (await import("./src/systems/moCompanion.js")).isMoCompanionActive())()`), true);
-  const riverWithMo = await screenshot("06-song-hong-with-mo");
+  const riverWithMo = await screenshot("08-song-hong-with-mo");
 
   await prepareView("view-thap-rua", { hour: 18, weather: "drizzle", intensity: 0.2, wetness: 0.4, withMo: true });
   await press("p", "KeyP");
@@ -216,6 +258,24 @@ try {
     return performance.now() - startedAt;
   })()`);
   assert(renderBudget < 1800, `120 frame panorama không được quá nặng (${renderBudget.toFixed(1)}ms)`);
+  const lakeCacheSize = await evaluate(`(async () => (await import("./src/render/renderHoGuomPanorama.js")).getHoGuomPanoramaCacheSize())()`);
+  assert(lakeCacheSize > 0 && lakeCacheSize <= 12, "Static lake layer cache phải hữu hạn");
+
+  await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await evaluate("location.reload()");
+  await delay(820);
+  await prepareView("view-ho-guom", { hour: 20 });
+  const mobileLakeAudit = await getLakePixelAudit();
+  assert(mobileLakeAudit.warmWater > 30, "Panorama mobile vẫn phải giữ landmark/reflection dễ đọc");
+  const mobileLake = await screenshot("09-ho-guom-mobile-night");
+  const mobileLayout = await evaluate(`(() => {
+    const canvas = document.querySelector("canvas");
+    const rect = canvas.getBoundingClientRect();
+    return { viewport: innerWidth, left: rect.left, right: rect.right, width: rect.width };
+  })()`);
+  assert(mobileLayout.left >= 0 && mobileLayout.right <= mobileLayout.viewport + 1, "View mode mobile không được tràn ngang");
+  await send("Emulation.clearDeviceMetricsOverride");
+  await delay(320);
 
   await evaluate(`(async () => { const { saveGame } = await import("./src/storage.js"); saveGame(); location.reload(); })()`);
   await delay(800);
@@ -231,7 +291,7 @@ try {
   }, "Reload phải về top-down nhưng vẫn giữ metadata ảnh viewpoint");
 
   assert.deepEqual(errors, [], "Browser console không được có runtime error");
-  process.stdout.write(`${JSON.stringify({ lake, cathedralDay, cathedralNight, bridgeTrain, rainyLake, riverWithMo, renderedProfiles, renderBudget }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ lake, lakePanRight, turtleTowerNight, cathedralDay, cathedralNight, bridgeTrain, rainyLake, riverWithMo, mobileLake, mobileLayout, sunsetAudit, nightAudit, rainyNightAudit, mobileLakeAudit, bridgeBeforePan, bridgeAfterPan, lakeCacheSize, renderedProfiles, renderBudget }, null, 2)}\n`);
   process.stdout.write("View mode browser smoke: OK\n");
 } finally {
   if (socket?.readyState === WebSocket.OPEN) socket.close();
