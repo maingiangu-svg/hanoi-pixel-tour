@@ -149,6 +149,91 @@ try {
   assert.match(hudState.meta, /^\d+m$/);
   const worldArrow = await screenshot("02-world-guidance-light");
 
+  const directionScreens = {};
+  const directionVectors = {
+    right: { x: 180, y: 0 },
+    left: { x: -180, y: 0 },
+    up: { x: 0, y: -180 },
+    down: { x: 0, y: 180 }
+  };
+  for (const [direction, vector] of Object.entries(directionVectors)) {
+    const result = await evaluate(`(async () => {
+      const { player, state } = await import("./src/state.js");
+      const navigation = await import("./src/systems/navigation.js");
+      const camera = await import("./src/camera.js");
+      const renderNavigation = await import("./src/render/renderNavigation.js");
+      state.vehicle.status = "stored";
+      state.vehicle.equipped = false;
+      player.x = 950;
+      player.y = 1000;
+      camera.snapCameraToPlayer();
+      const centerWorld = { x: player.x + player.width / 2, y: player.y + player.height / 2 };
+      navigation.setTrackedObjective({
+        id: "direction-${direction}",
+        type: "questPoint",
+        mapId: "hoanKiem",
+        targetPosition: { x: centerWorld.x + ${vector.x}, y: centerWorld.y + ${vector.y} },
+        label: "Kiểm tra hướng ${direction}",
+        routeMode: "walking"
+      }, { silent: true });
+      const guidance = renderNavigation.getDirectionalGuidanceState();
+      const anchor = renderNavigation.getPlayerDirectionArrowScreenPosition(guidance.angle, false, 0);
+      const center = camera.worldToScreen(centerWorld.x, centerWorld.y);
+      return { guidance, anchor, center };
+    })()`);
+    assert.equal(result.guidance.showPlayerArrow, true);
+    assert.equal(result.guidance.showScreenArrow, false);
+    if (direction === "right") assert(result.anchor.x > result.center.x && Math.abs(result.anchor.y - result.center.y) <= 1);
+    if (direction === "left") assert(result.anchor.x < result.center.x && Math.abs(result.anchor.y - result.center.y) <= 1);
+    if (direction === "up") assert(result.anchor.y < result.center.y && Math.abs(result.anchor.x - result.center.x) <= 1);
+    if (direction === "down") assert(result.anchor.y > result.center.y && Math.abs(result.anchor.x - result.center.x) <= 1);
+    await delay(90);
+    directionScreens[direction] = await screenshot(`02a-direction-${direction}`);
+  }
+
+  const vehicleDirection = await evaluate(`(async () => {
+    const { player, state } = await import("./src/state.js");
+    const navigation = await import("./src/systems/navigation.js");
+    const camera = await import("./src/camera.js");
+    const renderNavigation = await import("./src/render/renderNavigation.js");
+    state.vehicle.status = "riding";
+    state.vehicle.equipped = true;
+    const centerWorld = { x: player.x + player.width / 2, y: player.y + player.height / 2 };
+    navigation.setTrackedObjective({
+      id: "direction-vehicle",
+      type: "questPoint",
+      mapId: "hoanKiem",
+      targetPosition: { x: centerWorld.x + 180, y: centerWorld.y },
+      label: "Kiểm tra hướng khi đi xe",
+      routeMode: "walking"
+    }, { silent: true });
+    const guidance = renderNavigation.getDirectionalGuidanceState();
+    const walking = renderNavigation.getPlayerDirectionArrowScreenPosition(guidance.angle, false, 0);
+    const riding = renderNavigation.getPlayerDirectionArrowScreenPosition(guidance.angle, true, 0);
+    return { guidance, walking, riding };
+  })()`);
+  assert.equal(vehicleDirection.guidance.showPlayerArrow, true);
+  assert(vehicleDirection.riding.forwardOffset > vehicleDirection.walking.forwardOffset);
+  await delay(90);
+  directionScreens.vehicle = await screenshot("02b-direction-vehicle");
+
+  await evaluate(`(async () => {
+    const { player, state } = await import("./src/state.js");
+    const navigation = await import("./src/systems/navigation.js");
+    const { snapCameraToPlayer } = await import("./src/camera.js");
+    state.vehicle.status = "stored";
+    state.vehicle.equipped = false;
+    player.x = 610; player.y = 1370;
+    snapCameraToPlayer();
+    navigation.setTrackedObjective({
+      id: "browser-lake",
+      type: "landmark",
+      targetId: "hoGuom",
+      label: "Hồ Gươm",
+      routeMode: "walking"
+    }, { silent: true });
+  })()`);
+
   const darkWorld = await evaluate(`(async () => {
     const { state } = await import("./src/state.js");
     const weather = await import("./src/systems/weather.js");
@@ -331,6 +416,7 @@ try {
   process.stdout.write(`${JSON.stringify({
     map,
     worldArrow,
+    directionScreens,
     worldDark,
     worldRain,
     worldNear,

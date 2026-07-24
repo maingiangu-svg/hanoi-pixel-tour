@@ -8,6 +8,8 @@ const SAFE_MARGIN = 34;
 const TOP_SAFE_MARGIN = 54;
 const DISTANT_TARGET_WORLD_UNITS = 450;
 const ARRIVAL_DISTANCE_WORLD_UNITS = 38;
+const PLAYER_ARROW_FORWARD_OFFSET = 36;
+const RIDING_ARROW_FORWARD_OFFSET = 46;
 
 export function drawNavigationGuidance() {
   if (runtime.navigation?.debugGraph) drawDebugRouteGraph();
@@ -107,17 +109,27 @@ function drawWorldRoute(target) {
 
 function drawPlayerDirectionArrow(angle) {
   const riding = state.vehicle?.status === "riding";
-  const foot = worldToScreen(
-    player.x + player.width / 2,
-    player.y + player.height + (riding ? 18 : 11)
-  );
   const bob = Math.floor(performance.now() / 180) % 2;
+  const anchor = getPlayerDirectionArrowScreenPosition(angle, riding, bob);
 
   ctx.save();
-  ctx.translate(Math.round(foot.x), Math.round(foot.y - bob));
+  ctx.translate(anchor.x, anchor.y);
   ctx.rotate(angle);
   drawPixelArrow(0, 0, 13, "#10151b", "#ffd95a", "#fff8d6");
   ctx.restore();
+}
+
+export function getPlayerDirectionArrowScreenPosition(angle, riding = state.vehicle?.status === "riding", bob = 0) {
+  const center = worldToScreen(
+    player.x + player.width / 2,
+    player.y + player.height / 2
+  );
+  const forwardOffset = (riding ? RIDING_ARROW_FORWARD_OFFSET : PLAYER_ARROW_FORWARD_OFFSET) + bob;
+  return {
+    x: Math.round(center.x + Math.cos(angle) * forwardOffset),
+    y: Math.round(center.y + Math.sin(angle) * forwardOffset),
+    forwardOffset
+  };
 }
 
 function drawScreenAnchorArrow(angle, distanceMeters, target) {

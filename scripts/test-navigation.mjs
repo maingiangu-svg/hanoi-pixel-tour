@@ -58,8 +58,11 @@ const {
 } = await import("../src/systems/modal.js");
 const { getActiveQuestHud } = await import("../src/systems/questSystem.js");
 const { updateHud } = await import("../src/render/renderUI.js");
-const { getDirectionalGuidanceState } = await import("../src/render/renderNavigation.js");
-const { snapCameraToPlayer } = await import("../src/camera.js");
+const {
+  getDirectionalGuidanceState,
+  getPlayerDirectionArrowScreenPosition
+} = await import("../src/render/renderNavigation.js");
+const { snapCameraToPlayer, worldToScreen } = await import("../src/camera.js");
 const {
   clearTrackedObjective,
   getCurrentRoute,
@@ -87,6 +90,36 @@ assert(getCurrentRoute().length >= 2, "Landmark cùng map phải có route waypo
 const farGuidance = getDirectionalGuidanceState();
 assert.equal(farGuidance.showPlayerArrow, true, "Objective hợp lệ phải hiện arrow gần player");
 assert.equal(farGuidance.showScreenArrow, true, "Objective xa phải hiện arrow neo bên phải");
+
+const playerScreenCenter = worldToScreen(
+  player.x + player.width / 2,
+  player.y + player.height / 2
+);
+const rightArrow = getPlayerDirectionArrowScreenPosition(0, false, 0);
+const leftArrow = getPlayerDirectionArrowScreenPosition(Math.PI, false, 0);
+const upArrow = getPlayerDirectionArrowScreenPosition(-Math.PI / 2, false, 0);
+const downArrow = getPlayerDirectionArrowScreenPosition(Math.PI / 2, false, 0);
+assert(rightArrow.x > playerScreenCenter.x && Math.abs(rightArrow.y - playerScreenCenter.y) <= 1, "Arrow phải đứng trước bên phải");
+assert(leftArrow.x < playerScreenCenter.x && Math.abs(leftArrow.y - playerScreenCenter.y) <= 1, "Arrow phải đứng trước bên trái");
+assert(upArrow.y < playerScreenCenter.y && Math.abs(upArrow.x - playerScreenCenter.x) <= 1, "Arrow phải đứng phía trên");
+assert(downArrow.y > playerScreenCenter.y && Math.abs(downArrow.x - playerScreenCenter.x) <= 1, "Arrow phải đứng phía dưới");
+assert(
+  getPlayerDirectionArrowScreenPosition(0, true, 0).forwardOffset > rightArrow.forwardOffset,
+  "Arrow khi đi xe phải nằm xa thân xe hơn"
+);
+const movementOrigin = { x: player.x, y: player.y };
+for (let step = 0; step < 4; step += 1) {
+  player.x += 7;
+  player.y += 3;
+  snapCameraToPlayer();
+  const movingCenter = worldToScreen(player.x + player.width / 2, player.y + player.height / 2);
+  const movingArrow = getPlayerDirectionArrowScreenPosition(0, false, 0);
+  assert.equal(movingArrow.x - movingCenter.x, 36, "Arrow phải giữ offset ổn định khi player/camera di chuyển");
+  assert.equal(movingArrow.y - movingCenter.y, 0);
+}
+player.x = movementOrigin.x;
+player.y = movementOrigin.y;
+snapCameraToPlayer();
 
 const lakeTarget = getResolvedObjective();
 const originalPlayer = { x: player.x, y: player.y };
