@@ -1,21 +1,212 @@
-import { canvas, ctx, player, runtime, state } from "../state.js";
+import { canvas, ctx, player, runtime, state, ui } from "../state.js";
 import { worldToScreen } from "../camera.js";
-import { getResolvedObjective } from "../systems/navigation.js";
+import { getCurrentRoute, getResolvedObjective } from "../systems/navigation.js";
 import { isOverlayOpen } from "../systems/modal.js";
 import { getRouteGraph } from "../systems/routeGraph.js";
 
 const SAFE_MARGIN = 34;
 const TOP_SAFE_MARGIN = 54;
+const DISTANT_TARGET_WORLD_UNITS = 450;
+const ARRIVAL_DISTANCE_WORLD_UNITS = 38;
+const PLAYER_ARROW_FORWARD_OFFSET = 36;
+const RIDING_ARROW_FORWARD_OFFSET = 46;
 
 export function drawNavigationGuidance() {
   if (runtime.navigation?.debugGraph) drawDebugRouteGraph();
   if (!state.navigation?.showWorldGuidance || isOverlayOpen() || runtime.photoMode?.active) return;
   const target = getResolvedObjective();
   if (!target || target.unavailable || target.mapId !== state.currentMapId) return;
-  const screen = worldToScreen(target.x, target.y);
-  const inside = screen.x >= SAFE_MARGIN && screen.x <= canvas.width - SAFE_MARGIN && screen.y >= TOP_SAFE_MARGIN && screen.y <= canvas.height - SAFE_MARGIN;
-  if (inside) drawWorldTargetMarker(screen.x, screen.y, target);
-  else drawEdgeArrow(screen.x, screen.y, target);
+  const guidance = getDirectionalGuidanceState(target);
+  if (guidance.reached) {
+    if (guidance.inside) drawWorldTargetMarker(guidance.targetScreen.x, guidance.targetScreen.y, target);
+    return;
+  }
+
+  drawWorldRoute(target);
+  drawPlayerDirectionArrow(guidance.angle);
+  if (guidance.inside) drawWorldTargetMarker(guidance.targetScreen.x, guidance.targetScreen.y, target);
+  if (guidance.showScreenArrow) drawScreenAnchorArrow(guidance.angle, guidance.distanceMeters, target);
+}
+
+export function getDirectionalGuidanceState(target = getResolvedObjective()) {
+  if (!target || target.unavailable || target.mapId !== state.currentMapId) {
+    return {
+      visible: false,
+      reached: false,
+      inside: false,
+      showPlayerArrow: false,
+      showScreenArrow: false,
+      angle: 0,
+      distance: 0,
+      distanceMeters: 0,
+      targetScreen: null
+    };
+  }
+
+  const playerCenterX = player.x + player.width / 2;
+  const playerCenterY = player.y + player.height / 2;
+  const dx = target.x - playerCenterX;
+  const dy = target.y - playerCenterY;
+  const distance = Math.hypot(dx, dy);
+  const targetScreen = worldToScreen(target.x, target.y);
+  const inside = targetScreen.x >= SAFE_MARGIN &&
+    targetScreen.x <= canvas.width - SAFE_MARGIN &&
+    targetScreen.y >= TOP_SAFE_MARGIN &&
+    targetScreen.y <= canvas.height - SAFE_MARGIN;
+  const reached = distance <= ARRIVAL_DISTANCE_WORLD_UNITS || isTargetInteractionPromptActive(target);
+
+  return {
+    visible: true,
+    reached,
+    inside,
+    showPlayerArrow: !reached,
+    showScreenArrow: !reached && (!inside || distance > DISTANT_TARGET_WORLD_UNITS),
+    angle: Math.atan2(dy, dx),
+    distance,
+    distanceMeters: Math.round(distance / 10),
+    targetScreen
+  };
+}
+
+function drawWorldRoute(target) {
+  const route = getCurrentRoute();
+  if (route.length < 2) return;
+  const playerCenter = {
+    x: player.x + player.width / 2,
+    y: player.y + player.height / 2
+  };
+  const spacing = 56;
+  const phase = (performance.now() / 18) % spacing;
+  let travelled = 0;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  for (let index = 0; index < route.length - 1; index += 1) {
+    const start = index === 0 ? playerCenter : route[index];
+    const end = route[index + 1];
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const length = Math.hypot(dx, dy);
+    if (length < 1) continue;
+    const angle = Math.atan2(dy, dx);
+    const segmentOffset = (spacing - ((travelled + phase) % spacing)) % spacing;
+    for (let distance = segmentOffset; distance < length; distance += spacing) {
+      const ratio = distance / length;
+      const worldX = start.x + dx * ratio;
+      const worldY = start.y + dy * ratio;
+      if (Math.hypot(worldX - playerCenter.x, worldY - playerCenter.y) < 38) continue;
+      if (Math.hypot(worldX - target.x, worldY - target.y) < 30) continue;
+      const screen = worldToScreen(worldX, worldY);
+      if (screen.x < 16 || screen.x > canvas.width - 16 || screen.y < TOP_SAFE_MARGIN + 8 || screen.y > canvas.height - 18) continue;
+      const targetDistance = Math.hypot(worldX - target.x, worldY - target.y);
+      const alpha = Math.max(0.38, Math.min(0.72, 0.8 - targetDistance / 3200));
+      drawRouteChevron(Math.round(screen.x), Math.round(screen.y), angle, alpha);
+    }
+    travelled += length;
+  }
+  ctx.restore();
+}
+
+function drawPlayerDirectionArrow(angle) {
+  const riding = state.vehicle?.status === "riding";
+  const bob = Math.floor(performance.now() / 180) % 2;
+  const anchor = getPlayerDirectionArrowScreenPosition(angle, riding, bob);
+
+  ctx.save();
+  ctx.translate(anchor.x, anchor.y);
+  ctx.rotate(angle);
+  drawPixelArrow(0, 0, 13, "#10151b", "#ffd95a", "#fff8d6");
+  ctx.restore();
+}
+
+export function getPlayerDirectionArrowScreenPosition(angle, riding = state.vehicle?.status === "riding", bob = 0) {
+  const center = worldToScreen(
+    player.x + player.width / 2,
+    player.y + player.height / 2
+  );
+  const forwardOffset = (riding ? RIDING_ARROW_FORWARD_OFFSET : PLAYER_ARROW_FORWARD_OFFSET) + bob;
+  return {
+    x: Math.round(center.x + Math.cos(angle) * forwardOffset),
+    y: Math.round(center.y + Math.sin(angle) * forwardOffset),
+    forwardOffset
+  };
+}
+
+function drawScreenAnchorArrow(angle, distanceMeters, target) {
+  const anchorX = canvas.width - 49;
+  const anchorY = Math.round(canvas.height * 0.56);
+  const bob = Math.floor(performance.now() / 200) % 2;
+
+  ctx.save();
+  ctx.translate(anchorX, anchorY - bob);
+  ctx.fillStyle = "rgba(18, 23, 31, 0.94)";
+  ctx.fillRect(-27, -27, 54, 54);
+  ctx.strokeStyle = "#10151b";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(-27, -27, 54, 54);
+  ctx.strokeStyle = target.stage === "reachParking" ? "#8ee3ff" : "#ffd95a";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-22, -22, 44, 44);
+  ctx.rotate(angle);
+  drawPixelArrow(0, 0, 22, "#080b10", target.stage === "reachParking" ? "#8ee3ff" : "#ffd95a", "#fff8d6");
+  ctx.restore();
+
+  drawScreenDistanceBadge(distanceMeters, anchorX, anchorY + 39);
+}
+
+function drawPixelArrow(x, y, size, outline, fill, highlight) {
+  ctx.fillStyle = outline;
+  drawArrow(x, y, size);
+  ctx.fillStyle = fill;
+  drawArrow(x - 2, y, size - 5);
+  ctx.fillStyle = highlight;
+  ctx.fillRect(x + 1, y - 2, Math.max(3, Math.floor(size * 0.34)), 4);
+}
+
+function drawScreenDistanceBadge(distanceMeters, x, y) {
+  const text = `${distanceMeters}m`;
+  ctx.save();
+  ctx.font = "900 11px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const width = Math.max(42, Math.ceil(ctx.measureText(text).width) + 12);
+  ctx.fillStyle = "rgba(18, 23, 31, 0.94)";
+  ctx.fillRect(Math.round(x - width / 2), y - 9, width, 18);
+  ctx.strokeStyle = "#10151b";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(Math.round(x - width / 2), y - 9, width, 18);
+  ctx.fillStyle = "#fff8d6";
+  ctx.fillText(text, x, y + 1);
+  ctx.restore();
+}
+
+function isTargetInteractionPromptActive(target) {
+  const nearby = runtime.nearbyInteractable;
+  if (!nearby || uiPromptIsHidden()) return false;
+  const nearbyTargetId = nearby.source?.id || nearby.object?.id;
+  return Boolean(nearbyTargetId && [target.id, target.targetId].includes(nearbyTargetId));
+}
+
+function uiPromptIsHidden() {
+  return !ui.nearbyHint || ui.nearbyHint.classList.contains("hidden");
+}
+
+function drawRouteChevron(x, y, angle, alpha) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "rgba(16, 18, 24, 0.92)";
+  ctx.fillRect(-8, -5, 10, 3);
+  ctx.fillRect(-8, 3, 10, 3);
+  ctx.fillRect(0, -3, 4, 7);
+  ctx.fillStyle = "#fff068";
+  ctx.fillRect(-6, -3, 8, 2);
+  ctx.fillRect(-6, 2, 8, 2);
+  ctx.fillRect(1, -2, 3, 5);
+  ctx.fillStyle = "#fff9d0";
+  ctx.fillRect(0, -1, 2, 2);
+  ctx.restore();
 }
 
 function drawDebugRouteGraph() {
@@ -31,47 +222,23 @@ function drawDebugRouteGraph() {
 }
 
 function drawWorldTargetMarker(x, y, target) {
-  const pulse = Math.floor(performance.now() / 240) % 2;
-  const markerY = Math.round(y - 30 - pulse * 2);
+  const playerCenterX = player.x + player.width / 2;
+  const playerCenterY = player.y + player.height / 2;
+  const distance = Math.hypot(target.x - playerCenterX, target.y - playerCenterY);
+  const near = distance < 250;
+  const pulse = Math.floor(performance.now() / 220) % 3;
+  const markerY = Math.round(y - 32 - pulse);
   ctx.save();
   ctx.translate(Math.round(x), markerY);
   ctx.fillStyle = "#151515";
-  drawDiamond(0, 0, 9);
+  drawDiamond(0, 0, near ? 12 : 10);
   ctx.fillStyle = target.stage === "reachParking" ? "#8ee3ff" : "#ffe15b";
-  drawDiamond(0, 0, 6);
+  drawDiamond(0, 0, near ? 8 : 7);
   ctx.fillStyle = "#fff8d6";
-  ctx.fillRect(-2, -2, 4, 4);
-  drawLabel(target.stageLabel || target.label, 0, -17);
-  ctx.restore();
-}
-
-function drawEdgeArrow(targetX, targetY, target) {
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
-  const dx = targetX - centerX;
-  const dy = targetY - centerY;
-  const scale = Math.min(
-    (canvas.width / 2 - SAFE_MARGIN) / Math.max(1, Math.abs(dx)),
-    (canvas.height / 2 - TOP_SAFE_MARGIN) / Math.max(1, Math.abs(dy))
-  );
-  const x = Math.round(centerX + dx * scale);
-  const y = Math.round(Math.max(TOP_SAFE_MARGIN, Math.min(canvas.height - SAFE_MARGIN, centerY + dy * scale)));
-  const angle = Math.atan2(dy, dx);
-  const playerCenterX = player.x + player.width / 2;
-  const playerCenterY = player.y + player.height / 2;
-  const distance = Math.round(Math.hypot(target.x - playerCenterX, target.y - playerCenterY) / 10);
-
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle);
+  ctx.fillRect(-2, -3, 4, 5);
   ctx.fillStyle = "#151515";
-  drawArrow(0, 0, 13);
-  ctx.fillStyle = "#ffe15b";
-  drawArrow(-2, 0, 9);
-  ctx.restore();
-  ctx.save();
-  ctx.translate(x, y);
-  drawLabel(`${shorten(target.stageLabel || target.label)} · ${distance}m`, 0, y < 92 ? 24 : -25);
+  ctx.fillRect(-1, 5, 2, near ? 7 : 5);
+  if (near) drawLabel(target.stageLabel || target.label, 0, -21);
   ctx.restore();
 }
 
@@ -106,8 +273,4 @@ function drawLabel(text, x, y) {
   ctx.strokeRect(Math.round(x - width / 2), Math.round(y - 8), width, 16);
   ctx.fillStyle = "#fff8d6";
   ctx.fillText(text, x, y + 1, width - 6);
-}
-
-function shorten(text) {
-  return text.length > 22 ? `${text.slice(0, 20)}…` : text;
 }

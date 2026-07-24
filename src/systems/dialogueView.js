@@ -5,6 +5,7 @@ import { setCutsceneAudioDucking } from "./audioManager.js";
 import { pauseGameClock, resumeGameClock } from "./gameClock.js";
 import { closeAllOverlays } from "./modal.js";
 import { clearDialogueBackgroundCache } from "../render/renderDialogueBackground.js";
+import { clearMoDialoguePortrait, renderMoDialoguePortrait } from "../render/renderNpcCloseup.js";
 
 const CLOCK_PAUSE_REASON = "cinematic-dialogue";
 const INPUT_DEBOUNCE_MS = 160;
@@ -16,6 +17,9 @@ export function initDialogueView() {
   if (initialized) return;
   initialized = true;
   ui.cutsceneChoices?.addEventListener("click", handleChoiceClick);
+  ["pointerdown", "mousedown", "click"].forEach((eventName) => {
+    ui.cutsceneDialogue?.addEventListener(eventName, stopDialoguePointerPropagation);
+  });
 }
 
 export function enterDialogueView(npcOrId, options = {}) {
@@ -313,7 +317,15 @@ function renderDialogueViewUi() {
     ui.cutsceneDialogue.classList.add("hidden");
     return;
   }
-  ui.cutsceneDialogue.className = `cutscene-dialogue is-${line.kind} is-cinematic-dialogue`;
+  const wasHidden = ui.cutsceneDialogue.classList.contains("hidden");
+  const hadPortrait = ui.cutsceneDialogue.classList.contains("has-mo-portrait");
+  ui.cutsceneDialogue.className = [
+    "cutscene-dialogue",
+    `is-${line.kind}`,
+    "is-cinematic-dialogue",
+    wasHidden ? "is-opening" : "",
+    hadPortrait ? "has-mo-portrait" : ""
+  ].filter(Boolean).join(" ");
   ui.cutsceneKind.textContent = line.kind === "internal"
     ? "Độc thoại nội tâm"
     : line.kind === "narration" ? "Quan sát" : "Hội thoại trực tiếp";
@@ -321,30 +333,48 @@ function renderDialogueViewUi() {
   ui.cutsceneSpeaker.classList.toggle("hidden", !ui.cutsceneSpeaker.textContent);
   ui.cutsceneText.textContent = line.text;
   ui.cutsceneChoices.innerHTML = "";
+  ui.cutsceneChoices.removeAttribute?.("aria-activedescendant");
   (line.choices || []).forEach((choice, index) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.id = `dialogue-view-choice-${index}`;
     button.dataset.dialogueChoiceIndex = String(index);
     button.className = index === view.selectedIndex ? "is-selected" : "";
     button.disabled = Boolean(choice.disabled);
+    button.setAttribute("aria-pressed", String(index === view.selectedIndex));
     button.textContent = choice.text;
     ui.cutsceneChoices.appendChild(button);
   });
+  if (view.selectedIndex >= 0) {
+    ui.cutsceneChoices.setAttribute("aria-activedescendant", `dialogue-view-choice-${view.selectedIndex}`);
+  }
   ui.cutsceneHint.textContent = line.choices?.length
-    ? "W/S hoặc ↑/↓: Chọn · Enter: Xác nhận · Esc: Rời"
-    : "Enter/Space: Tiếp tục · Esc: Rời";
+    ? "W/S hoặc ↑/↓: Chọn   •   Enter: Xác nhận   •   Esc: Đóng"
+    : "Enter/Space: Tiếp tục   •   Esc: Đóng";
+  ui.cutsceneContinue?.classList.toggle("hidden", Boolean(line.choices?.length));
+  renderMoDialoguePortrait({
+    speaker: line.speaker || view.profile.name,
+    portraitId: view.profileId,
+    expression: view.expression,
+    pose: view.pose
+  });
   ui.cutsceneDialogue.classList.remove("hidden");
 }
 
 function hideDialogueViewUi() {
   if (!runtime.cutscene?.active) ui.cutsceneDialogue?.classList.add("hidden");
+  if (!runtime.cutscene?.active) ui.cutsceneDialogue?.classList.remove("is-opening");
   if (!runtime.cutscene?.active && ui.cutsceneChoices) ui.cutsceneChoices.innerHTML = "";
+  if (!runtime.cutscene?.active) ui.cutsceneContinue?.classList.add("hidden");
+  if (!runtime.cutscene?.active) clearMoDialoguePortrait();
 }
 
 function handleChoiceClick(event) {
   const button = event.target.closest("button[data-dialogue-choice-index]");
   const view = runtime.dialogueView;
   if (!button || !view?.active || view.phase !== "active" || view.uiHidden) return;
+  event.preventDefault();
+  event.stopPropagation();
   const index = Number(button.dataset.dialogueChoiceIndex);
   if (!Number.isInteger(index) || currentLine(view)?.choices?.[index]?.disabled) return;
   view.selectedIndex = index;
@@ -392,4 +422,8 @@ function clearGameplayKeys() {
 
 function setDialogueViewUiHiddenClass(hidden) {
   document.body?.classList?.toggle("is-dialogue-view-ui-hidden", Boolean(hidden));
+}
+
+function stopDialoguePointerPropagation(event) {
+  event.stopPropagation();
 }

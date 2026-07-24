@@ -12,12 +12,13 @@ import { openQuiz } from "./quiz.js";
 import { openShop } from "./shop.js";
 import { dismountVehicle, isRidingVehicle, openVehicleShop } from "./vehicle.js";
 import { checkAreaQuests, checkVictory } from "./questSystem.js";
-import { closeChoiceModal, closeInfoModal, isOverlayOpen, openChoiceModal, openLandmarkInfoPanel, showMessage } from "./modal.js";
+import { closeChoiceModal, closeInfoModal, isOverlayOpen, openChoiceModal, openLandmarkInfoPanel, showMessage, showQuestCompletionNotification } from "./modal.js";
 import { screenToFramePosition } from "./canvasLayout.js";
 import { openParkingMenu } from "./parking.js";
 import { getScheduledNpcDialogue, getScheduledNpcsForMap, updateNpcSchedules } from "./npcSchedule.js";
 import { beginMapTransition } from "./mapTransition.js";
 import { canInviteMo, endMoHangout, getMoCompanionDialogue, getMoInvitationBlockedMessage, getMoReturnPoint, isMoCompanionActive, isNearMoReturnPoint, startMoHangout, syncMoCompanionToPlayer } from "./moCompanion.js";
+import { getPendingMoReaction, markMoReactionShown } from "./moRelationship.js";
 import { getActiveMapNpcs } from "./worldSchedule.js";
 import { clearNpcReactionBubble } from "./npcReactions.js";
 import {
@@ -39,7 +40,7 @@ import {
   isEnvironmentInteractionActive,
   showActiveEnvironmentHint
 } from "./environmentInteraction.js";
-import { completeTrackedObjective } from "./navigation.js";
+import { completeTrackedObjective, getResolvedObjective, updateTrackedObjective } from "./navigation.js";
 import { isStoryMapUnlocked, isStoryTargetUnlocked } from "./storyState.js";
 import {
   getChapter1Interactables,
@@ -104,6 +105,12 @@ export function updateNearbyInteractable() {
 
   if (runtime.nearbyInteractable) {
     ui.nearbyHint.textContent = getInteractionPrompt(runtime.nearbyInteractable);
+    const target = getResolvedObjective();
+    const nearbyTargetId = runtime.nearbyInteractable.source?.id || runtime.nearbyInteractable.object?.id;
+    ui.nearbyHint.classList.toggle(
+      "is-quest-target",
+      Boolean(target && [target.targetId, target.id].includes(nearbyTargetId))
+    );
     const screen = runtime.nearbyInteractable.point
       ? worldToScreen(
         runtime.nearbyInteractable.point.x + runtime.nearbyInteractable.point.labelOffsetX,
@@ -116,6 +123,7 @@ export function updateNearbyInteractable() {
     ui.nearbyHint.style.bottom = "auto";
     ui.nearbyHint.classList.remove("hidden");
   } else {
+    ui.nearbyHint.classList.remove("is-quest-target");
     ui.nearbyHint.classList.add("hidden");
   }
 }
@@ -687,6 +695,9 @@ export function handleScheduledNpc(npc) {
 }
 
 function handleMoInteraction(npc) {
+  if (canShowMoRelationshipReaction(npc) && openPendingMoReactionDialogue(npc)) {
+    return;
+  }
   if (handleChapter1MoInteraction(npc)) {
     return;
   }
@@ -729,6 +740,23 @@ function handleMoInteraction(npc) {
       { text: "Mời Mơ đi chơi", expression: "curious", afterClose: () => openMoHangoutConfirmation(npc) },
       { text: "Rời đi" }
     ]
+  });
+}
+
+function canShowMoRelationshipReaction(npc) {
+  return isMoCompanionActive() || ["washing", "playingWithChildren", "resting"].includes(npc?.state);
+}
+
+function openPendingMoReactionDialogue(npc) {
+  const reaction = getPendingMoReaction();
+  if (!reaction) return false;
+  return enterNpcDialogue(npc, {
+    text: reaction.text,
+    expression: reaction.expression,
+    cameraShot: reaction.expression === "suspect" ? "close" : "medium",
+    onComplete: () => {
+      markMoReactionShown(reaction.id);
+    }
   });
 }
 
@@ -835,7 +863,17 @@ export function completeNpcTask(task) {
     addUnique(state.inventory.souvenirs, task.souvenir);
   }
 
-  showMessage(`${task.done || "Nhiệm vụ hoàn thành!"} Bạn nhận ${formatMoney(task.reward || NPC_REWARD)}.`);
+  updateTrackedObjective({ force: true });
+  showQuestCompletionNotification({
+    completionId: `npc-task:${task.taskId}`,
+    title: task.name || task.title || "Giúp người Hà Nội",
+    summary: task.done || "Bạn đã hoàn thành việc được nhờ.",
+    rewards: [
+      `+${formatMoney(task.reward || NPC_REWARD)}`,
+      task.souvenir ? `+ ${task.souvenir}` : ""
+    ],
+    nextObjective: "Tiếp tục khám phá hoặc mở Sổ nhiệm vụ."
+  });
   saveGame();
   checkAreaQuests();
   checkVictory();
@@ -850,7 +888,14 @@ export function completeDeliveryTask() {
   addUnique(state.inventory.souvenirs, task.souvenir);
 
   const message = `Bạn đã giao Gói hàng nhỏ tại Chợ Đồng Xuân. Bạn nhận ${formatMoney(task.reward)} và ${task.souvenir}.`;
-  showMessage(message);
+  updateTrackedObjective({ force: true });
+  showQuestCompletionNotification({
+    completionId: "npc-task:deliveryDongXuan",
+    title: "Giao hàng Đồng Xuân",
+    summary: "Gói hàng nhỏ đã được giao tới quầy chính.",
+    rewards: [`+${formatMoney(task.reward)}`, `+ ${task.souvenir}`],
+    nextObjective: "Tiếp tục khám phá hoặc mở Sổ nhiệm vụ."
+  });
   saveGame();
   checkVictory();
   return message;

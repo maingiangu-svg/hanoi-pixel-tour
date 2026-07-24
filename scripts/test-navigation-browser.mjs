@@ -88,21 +88,29 @@ try {
   await send("Log.enable");
   await send("Page.enable");
   await delay(500);
-  await evaluate(`(async () => {
-    const { state, player } = await import("./src/state.js");
+  const initialGuidance = await evaluate(`(async () => {
+    const { state, player, runtime } = await import("./src/state.js");
     const navigation = await import("./src/systems/navigation.js");
     const modal = await import("./src/systems/modal.js");
     state.profile.gender = "female";
     state.currentMapId = "hoanKiem";
     state.navigation = { trackedObjective: null, showWorldGuidance: true };
     state.moCompanion.active = false;
+    runtime.cutscene = null;
+    runtime.dialogueView = null;
+    document.getElementById("gameFrame").classList.remove("is-cutscene", "is-dialogue-view");
+    document.getElementById("cutsceneDialogue").classList.add("hidden");
     state.vehicle = { owned: true, type: "vinfast-electric", equipped: false, status: "stored", parkedAt: null };
     player.x = 610; player.y = 1370;
     modal.closeAllOverlays();
     document.getElementById("characterModal").classList.add("hidden");
     navigation.setTrackedObjective({ id: "browser-lake", type: "landmark", targetId: "hoGuom", label: "Hồ Gươm", routeMode: "walking" }, { silent: true });
-    return navigation.getCurrentRoute().length;
+    const guidance = (await import("./src/render/renderNavigation.js")).getDirectionalGuidanceState();
+    return { routeLength: navigation.getCurrentRoute().length, guidance };
   })()`);
+  assert(initialGuidance.routeLength >= 2);
+  assert.equal(initialGuidance.guidance.showPlayerArrow, true);
+  assert.equal(initialGuidance.guidance.showScreenArrow, true);
 
   await press("m", "KeyM");
   const mapState = await evaluate(`({
@@ -129,7 +137,220 @@ try {
   assert.equal(await evaluate(`(async () => Boolean((await import("./src/systems/navigation.js")).getTrackedObjective()))()`), true);
   await press("m", "KeyM");
   assert.equal(await evaluate(`document.getElementById("mapPanel").classList.contains("hidden")`), true);
-  const worldArrow = await screenshot("02-world-guidance");
+  const hudState = await evaluate(`({
+    visible: !document.getElementById("hudObjectiveCard").classList.contains("hidden"),
+    title: document.getElementById("hudQuestName").textContent,
+    objective: document.getElementById("hudObjective").textContent,
+    meta: document.getElementById("hudObjectiveMeta").textContent
+  })`);
+  assert.equal(hudState.visible, true);
+  assert.equal(hudState.title, "Hồ Gươm");
+  assert.match(hudState.objective, /Hồ Gươm/);
+  assert.match(hudState.meta, /^\d+m$/);
+  const worldArrow = await screenshot("02-world-guidance-light");
+
+  const directionScreens = {};
+  const directionVectors = {
+    right: { x: 180, y: 0 },
+    left: { x: -180, y: 0 },
+    up: { x: 0, y: -180 },
+    down: { x: 0, y: 180 }
+  };
+  for (const [direction, vector] of Object.entries(directionVectors)) {
+    const result = await evaluate(`(async () => {
+      const { player, state } = await import("./src/state.js");
+      const navigation = await import("./src/systems/navigation.js");
+      const camera = await import("./src/camera.js");
+      const renderNavigation = await import("./src/render/renderNavigation.js");
+      state.vehicle.status = "stored";
+      state.vehicle.equipped = false;
+      player.x = 950;
+      player.y = 1000;
+      camera.snapCameraToPlayer();
+      const centerWorld = { x: player.x + player.width / 2, y: player.y + player.height / 2 };
+      navigation.setTrackedObjective({
+        id: "direction-${direction}",
+        type: "questPoint",
+        mapId: "hoanKiem",
+        targetPosition: { x: centerWorld.x + ${vector.x}, y: centerWorld.y + ${vector.y} },
+        label: "Kiểm tra hướng ${direction}",
+        routeMode: "walking"
+      }, { silent: true });
+      const guidance = renderNavigation.getDirectionalGuidanceState();
+      const anchor = renderNavigation.getPlayerDirectionArrowScreenPosition(guidance.angle, false, 0);
+      const center = camera.worldToScreen(centerWorld.x, centerWorld.y);
+      return { guidance, anchor, center };
+    })()`);
+    assert.equal(result.guidance.showPlayerArrow, true);
+    assert.equal(result.guidance.showScreenArrow, false);
+    if (direction === "right") assert(result.anchor.x > result.center.x && Math.abs(result.anchor.y - result.center.y) <= 1);
+    if (direction === "left") assert(result.anchor.x < result.center.x && Math.abs(result.anchor.y - result.center.y) <= 1);
+    if (direction === "up") assert(result.anchor.y < result.center.y && Math.abs(result.anchor.x - result.center.x) <= 1);
+    if (direction === "down") assert(result.anchor.y > result.center.y && Math.abs(result.anchor.x - result.center.x) <= 1);
+    await delay(90);
+    directionScreens[direction] = await screenshot(`02a-direction-${direction}`);
+  }
+
+  const vehicleDirection = await evaluate(`(async () => {
+    const { player, state } = await import("./src/state.js");
+    const navigation = await import("./src/systems/navigation.js");
+    const camera = await import("./src/camera.js");
+    const renderNavigation = await import("./src/render/renderNavigation.js");
+    state.vehicle.status = "riding";
+    state.vehicle.equipped = true;
+    const centerWorld = { x: player.x + player.width / 2, y: player.y + player.height / 2 };
+    navigation.setTrackedObjective({
+      id: "direction-vehicle",
+      type: "questPoint",
+      mapId: "hoanKiem",
+      targetPosition: { x: centerWorld.x + 180, y: centerWorld.y },
+      label: "Kiểm tra hướng khi đi xe",
+      routeMode: "walking"
+    }, { silent: true });
+    const guidance = renderNavigation.getDirectionalGuidanceState();
+    const walking = renderNavigation.getPlayerDirectionArrowScreenPosition(guidance.angle, false, 0);
+    const riding = renderNavigation.getPlayerDirectionArrowScreenPosition(guidance.angle, true, 0);
+    return { guidance, walking, riding };
+  })()`);
+  assert.equal(vehicleDirection.guidance.showPlayerArrow, true);
+  assert(vehicleDirection.riding.forwardOffset > vehicleDirection.walking.forwardOffset);
+  await delay(90);
+  directionScreens.vehicle = await screenshot("02b-direction-vehicle");
+
+  await evaluate(`(async () => {
+    const { player, state } = await import("./src/state.js");
+    const navigation = await import("./src/systems/navigation.js");
+    const { snapCameraToPlayer } = await import("./src/camera.js");
+    state.vehicle.status = "stored";
+    state.vehicle.equipped = false;
+    player.x = 610; player.y = 1370;
+    snapCameraToPlayer();
+    navigation.setTrackedObjective({
+      id: "browser-lake",
+      type: "landmark",
+      targetId: "hoGuom",
+      label: "Hồ Gươm",
+      routeMode: "walking"
+    }, { silent: true });
+  })()`);
+
+  const darkWorld = await evaluate(`(async () => {
+    const { state } = await import("./src/state.js");
+    const weather = await import("./src/systems/weather.js");
+    state.gameTime.day = 1; state.gameTime.hour = 20; state.gameTime.minute = 15;
+    state.gameTime.totalGameMinutes = 1215;
+    weather.setWeatherForDebug("clear");
+    return state.weather.type;
+  })()`);
+  assert.equal(darkWorld, "clear");
+  await delay(180);
+  const worldDark = await screenshot("03-world-guidance-night");
+
+  const rainWorld = await evaluate(`(async () => {
+    const { state } = await import("./src/state.js");
+    const weather = await import("./src/systems/weather.js");
+    state.gameTime.day = 1; state.gameTime.hour = 12; state.gameTime.minute = 10;
+    state.gameTime.totalGameMinutes = 730;
+    weather.setWeatherForDebug("heavyRain");
+    return state.weather.type;
+  })()`);
+  assert.equal(rainWorld, "heavyRain");
+  await delay(220);
+  const worldRain = await screenshot("04-world-guidance-rain");
+
+  const nearGuidance = await evaluate(`(async () => {
+    const { player } = await import("./src/state.js");
+    const navigation = await import("./src/systems/navigation.js");
+    const { snapCameraToPlayer } = await import("./src/camera.js");
+    const target = navigation.getResolvedObjective();
+    player.x = target.x - player.width / 2 - 60;
+    player.y = target.y - player.height / 2;
+    snapCameraToPlayer();
+    navigation.updateTrackedObjective({ force: true });
+    return (await import("./src/render/renderNavigation.js")).getDirectionalGuidanceState();
+  })()`);
+  assert.equal(nearGuidance.reached, false);
+  assert.equal(nearGuidance.showPlayerArrow, true);
+  assert.equal(nearGuidance.showScreenArrow, false);
+  await delay(180);
+  const worldNear = await screenshot("05-world-guidance-near");
+
+  const arrivedGuidance = await evaluate(`(async () => {
+    const { player } = await import("./src/state.js");
+    const navigation = await import("./src/systems/navigation.js");
+    const { snapCameraToPlayer } = await import("./src/camera.js");
+    const interaction = await import("./src/systems/interaction.js");
+    const target = navigation.getResolvedObjective();
+    player.x = target.x - player.width / 2;
+    player.y = target.y - player.height / 2;
+    snapCameraToPlayer();
+    navigation.updateTrackedObjective({ force: true });
+    interaction.updateNearbyInteractable();
+    const guidance = (await import("./src/render/renderNavigation.js")).getDirectionalGuidanceState();
+    return {
+      guidance,
+      promptVisible: !document.getElementById("nearbyHint").classList.contains("hidden"),
+      prompt: document.getElementById("nearbyHint").textContent
+    };
+  })()`);
+  assert.equal(arrivedGuidance.guidance.reached, true);
+  assert.equal(arrivedGuidance.guidance.showPlayerArrow, false);
+  assert.equal(arrivedGuidance.guidance.showScreenArrow, false);
+  assert.equal(arrivedGuidance.promptVisible, true);
+  assert.match(arrivedGuidance.prompt, /E/);
+  await delay(120);
+  const worldArrived = await screenshot("06-world-guidance-arrived");
+
+  const notificationState = await evaluate(`(async () => {
+    const { state, player } = await import("./src/state.js");
+    const branching = await import("./src/systems/branchingQuest.js");
+    const navigation = await import("./src/systems/navigation.js");
+    const { snapCameraToPlayer } = await import("./src/camera.js");
+    player.x = 610; player.y = 1370;
+    snapCameraToPlayer();
+    const beforeMoney = state.money;
+    branching.startBranchingQuest("lostTourist");
+    branching.chooseQuestOption("lostTourist", "escort");
+    navigation.trackBranchingQuest("lostTourist");
+    const markerBefore = Boolean(navigation.getResolvedObjective());
+    const routeBefore = navigation.getCurrentRoute().length;
+    const first = branching.completeQuestBranch("lostTourist", "excellent");
+    const duplicate = branching.completeQuestBranch("lostTourist", "excellent");
+    return {
+      first,
+      duplicate,
+      active: Boolean(document.getElementById("dialogueBox").classList.contains("is-quest-complete")),
+      title: document.getElementById("questCompletionName").textContent,
+      rewards: document.getElementById("questCompletionRewards").textContent,
+      next: document.getElementById("questCompletionNext").textContent,
+      markerBefore,
+      routeBefore,
+      markerAfter: navigation.getResolvedObjective(),
+      routeAfter: navigation.getCurrentRoute().length,
+      guidanceAfter: (await import("./src/render/renderNavigation.js")).getDirectionalGuidanceState(),
+      reward: state.money - beforeMoney
+    };
+  })()`);
+  assert.equal(notificationState.first, true);
+  assert.equal(notificationState.duplicate, false);
+  assert.equal(notificationState.active, true);
+  assert.equal(notificationState.title, "Du khách bị lạc");
+  assert.match(notificationState.rewards, /25\.000đ/);
+  assert.match(notificationState.next, /Sổ nhiệm vụ/);
+  assert.equal(notificationState.markerBefore, true);
+  assert(notificationState.routeBefore >= 2);
+  assert.equal(notificationState.markerAfter, null);
+  assert.equal(notificationState.routeAfter, 0);
+  assert.equal(notificationState.guidanceAfter.visible, false);
+  assert.equal(notificationState.reward, 25000);
+  await delay(240);
+  const questFeedback = await screenshot("07-quest-completion");
+  const playerBeforeNotificationClick = await evaluate(`(async () => { const { player } = await import("./src/state.js"); return { x: player.x, y: player.y }; })()`);
+  await evaluate(`document.getElementById("dialogueBox").click()`);
+  await delay(220);
+  assert.equal(await evaluate(`document.getElementById("dialogueBox").classList.contains("hidden")`), true);
+  const playerAfterNotificationClick = await evaluate(`(async () => { const { player } = await import("./src/state.js"); return { x: player.x, y: player.y }; })()`);
+  assert.deepEqual(playerAfterNotificationClick, playerBeforeNotificationClick, "Click notification không được truyền xuống world");
 
   const transit = await evaluate(`(async () => {
     const navigation = await import("./src/systems/navigation.js");
@@ -190,9 +411,25 @@ try {
   assert.notEqual(mobileLayout.opacity, "0");
   assert(mobileLayout.left >= 0 && mobileLayout.right <= mobileLayout.viewportWidth, "Bản đồ mobile không được tràn ngang");
   assert(mobileLayout.top >= 0 && mobileLayout.bottom <= mobileLayout.viewportHeight, "Bản đồ mobile không được tràn dọc viewport");
-  const mobileMap = await screenshot("03-map-mobile");
+  const mobileMap = await screenshot("08-map-mobile");
   assert.deepEqual(errors, [], "Browser console không được có runtime error");
-  process.stdout.write(`${JSON.stringify({ map, worldArrow, mobileMap, mobileLayout }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({
+    map,
+    worldArrow,
+    directionScreens,
+    worldDark,
+    worldRain,
+    worldNear,
+    worldArrived,
+    questFeedback,
+    mobileMap,
+    mobileLayout,
+    hudState,
+    initialGuidance,
+    nearGuidance,
+    arrivedGuidance,
+    notificationState
+  }, null, 2)}\n`);
   process.stdout.write("Navigation browser smoke: OK\n");
 } finally {
   if (socket?.readyState === WebSocket.OPEN) socket.close();

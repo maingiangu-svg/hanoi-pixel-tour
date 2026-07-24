@@ -128,7 +128,7 @@ canvas {
   left: 3px;
   right: 3px;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) max-content minmax(0, 1.6fr);
+  grid-template-columns: minmax(0, 0.72fr) max-content minmax(0, 1.75fr);
   gap: 2px;
   pointer-events: none;
   transition: opacity 420ms steps(6, end);
@@ -219,6 +219,61 @@ canvas {
   white-space: nowrap;
 }
 
+.hud-objective {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 1px 6px;
+  min-height: 34px;
+  padding: 3px 6px;
+  background: #f6cf55;
+  border-color: #151515;
+}
+
+.hud-objective .hud-label {
+  grid-column: 1 / -1;
+  color: #6d3b19;
+  font-size: 6px;
+  line-height: 1;
+}
+
+.hud-objective strong {
+  grid-column: 1 / -1;
+  color: #17120d;
+  font-size: 10px;
+  line-height: 1.05;
+}
+
+.hud-objective-text {
+  min-width: 0;
+  overflow: hidden;
+  color: #2d2820;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud-objective-meta {
+  align-self: end;
+  color: #61471e;
+  font-size: 7px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hud-objective.is-updated {
+  background: #fff09a;
+  box-shadow: 2px 2px 0 #000, inset 0 0 0 2px #d34c3f;
+  animation: quest-hud-update 220ms steps(3, end) 2;
+}
+
+@keyframes quest-hud-update {
+  50% { transform: translateY(1px); }
+}
+
 .nearby-hint {
   position: absolute;
   z-index: 4;
@@ -237,6 +292,14 @@ canvas {
   outline: 2px solid #f4c542;
   outline-offset: -6px;
   white-space: pre-line;
+}
+
+.nearby-hint.is-quest-target {
+  max-width: min(88%, 300px);
+  background: #17242a;
+  color: #fffbd5;
+  outline-color: #fff068;
+  box-shadow: 4px 4px 0 #000;
 }
 
 .nearby-hint.is-environment-status {
@@ -302,22 +365,34 @@ body.is-immortal-intro .game-frame {
   position: absolute;
   z-index: 9;
   left: 50%;
-  bottom: 7.5%;
-  width: min(78%, 660px);
-  min-height: 92px;
+  bottom: clamp(12px, 5.5%, 38px);
+  width: min(calc(100% - 32px), 800px);
+  max-height: min(64%, 430px);
   transform: translateX(-50%);
-  padding: 10px 14px 8px;
-  border: 4px solid #111118;
-  background: rgba(24, 24, 31, 0.94);
+  padding: 12px 14px 10px;
+  overflow: hidden;
+  border: 4px solid #0d0c12;
+  background: rgba(23, 23, 30, 0.96);
   color: #fff6cf;
-  box-shadow: 6px 6px 0 #000;
+  box-shadow:
+    inset 0 0 0 2px rgba(219, 185, 95, 0.26),
+    6px 6px 0 #000;
   pointer-events: auto;
+  isolation: isolate;
+  overscroll-behavior: contain;
+}
+
+.cutscene-dialogue.is-opening {
+  animation: dialogue-panel-enter 200ms steps(5, end);
 }
 
 .cutscene-dialogue.is-internal {
   border-color: #b7a8d8;
   background: rgba(31, 28, 43, 0.96);
   color: #f5efff;
+  box-shadow:
+    inset 0 0 0 2px rgba(183, 168, 216, 0.24),
+    6px 6px 0 #000;
 }
 
 .cutscene-dialogue.is-narration {
@@ -327,10 +402,74 @@ body.is-immortal-intro .game-frame {
 }
 
 .cutscene-dialogue.is-cinematic-dialogue {
-  bottom: 3.5%;
-  width: min(84%, 720px);
-  min-height: 86px;
+  bottom: clamp(10px, 3.5%, 26px);
+  width: min(calc(100% - 28px), 840px);
+  max-height: min(68%, 460px);
   background: rgba(18, 19, 25, 0.96);
+}
+
+.cutscene-dialogue.has-mo-portrait {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.cutscene-portrait {
+  width: 100%;
+  aspect-ratio: 12 / 13;
+  overflow: hidden;
+  border: 3px solid #0d0c12;
+  background: #17232a;
+  box-shadow:
+    0 0 0 2px #8d794a,
+    4px 4px 0 #000;
+}
+
+.cutscene-portrait canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.cutscene-portrait.is-changing {
+  animation: dialogue-portrait-fade 180ms steps(4, end);
+}
+
+.cutscene-dialogue-content {
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cutscene-dialogue-header {
+  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 9px 5px;
+  border-left: 4px solid #d9b95f;
+  border-bottom: 2px solid #5f5846;
+  background: #302f38;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.62);
+}
+
+@keyframes dialogue-panel-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes dialogue-portrait-fade {
+  from { opacity: 0.56; }
+  to { opacity: 1; }
 }
 
 .cutscene-kind,
@@ -342,16 +481,20 @@ body.is-immortal-intro .game-frame {
 
 .cutscene-kind {
   color: #d9b95f;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 900;
+  line-height: 1.1;
   text-transform: uppercase;
 }
 
 .cutscene-speaker {
-  margin-top: 2px;
+  max-width: 100%;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
   color: #ffffff;
-  font-size: 21px;
-  line-height: 1.1;
+  font-size: 16px;
+  line-height: 1.15;
+  text-shadow: 2px 2px 0 #000;
 }
 
 .cutscene-dialogue.is-internal .cutscene-speaker {
@@ -359,16 +502,31 @@ body.is-immortal-intro .game-frame {
 }
 
 .cutscene-text {
-  margin-top: 5px;
-  font-size: 18px;
+  min-height: 0;
+  max-height: min(23vh, 158px);
+  margin-top: 10px;
+  padding: 1px 4px 2px 1px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  color: inherit;
+  font-size: 14px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.45;
+  scrollbar-color: #d9b95f #17171e;
+  scrollbar-width: thin;
 }
 
 .cutscene-choices {
   display: grid;
-  gap: 4px;
-  margin-top: 8px;
+  gap: 6px;
+  max-height: min(27vh, 196px);
+  margin-top: 10px;
+  padding: 2px 4px 2px 2px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: #d9b95f #17171e;
+  scrollbar-width: thin;
 }
 
 .cutscene-choices:empty {
@@ -376,29 +534,108 @@ body.is-immortal-intro .game-frame {
 }
 
 .cutscene-choices button {
+  position: relative;
   width: 100%;
-  padding: 5px 8px;
-  border: 2px solid #5f5a68;
+  min-height: 36px;
+  padding: 7px 10px 7px 31px;
+  overflow-wrap: anywhere;
+  border: 2px solid #666170;
   border-radius: 0;
-  background: #252532;
+  background: #252630;
   color: #fff6cf;
   text-align: left;
   cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+  box-shadow: inset 3px 0 0 #383844;
 }
 
-.cutscene-choices button.is-selected {
+.cutscene-choices button::before {
+  content: "▶";
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  opacity: 0;
+  color: #ffe470;
+  transform: translateY(-50%);
+}
+
+.cutscene-choices button:hover:not(:disabled) {
+  border-color: #a39a7d;
+  background: #30313c;
+  color: #ffffff;
+}
+
+.cutscene-choices button.is-selected,
+.cutscene-choices button[aria-pressed="true"] {
   border-color: #ffe470;
   background: #4a3d27;
   color: #ffffff;
-  outline: 2px solid #111118;
+  box-shadow:
+    inset 4px 0 0 #f2bd45,
+    3px 3px 0 #08080c;
+}
+
+.cutscene-choices button.is-selected::before,
+.cutscene-choices button[aria-pressed="true"]::before,
+.cutscene-choices button:focus-visible::before {
+  opacity: 1;
+}
+
+.cutscene-choices button:focus-visible {
+  border-color: #fff2a6;
+  outline: 2px solid #f2bd45;
+  outline-offset: 2px;
+}
+
+.cutscene-choices button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.cutscene-dialogue-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 17px;
+  margin-top: 8px;
+  padding-top: 5px;
+  border-top: 2px solid rgba(217, 185, 95, 0.24);
 }
 
 .cutscene-hint {
-  margin-top: 6px;
   color: #c8c2ae;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
+  line-height: 1.25;
   text-align: right;
+}
+
+.cutscene-continue {
+  flex: 0 0 auto;
+  color: #ffe470;
+  font-size: 10px;
+  line-height: 1;
+  text-shadow: 2px 2px 0 #000;
+  animation: dialogue-continue-pulse 900ms steps(2, end) infinite;
+}
+
+@keyframes dialogue-continue-pulse {
+  0%, 45% { transform: translateY(0); opacity: 1; }
+  46%, 100% { transform: translateY(2px); opacity: 0.54; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cutscene-dialogue.is-opening,
+  .cutscene-portrait.is-changing,
+  .cutscene-continue,
+  .dialogue-box.is-quest-complete,
+  .hud-objective.is-updated,
+  .map-navigation-route {
+    animation: none;
+  }
 }
 
 .vehicle-status {
@@ -440,6 +677,105 @@ body.is-immortal-intro .game-frame {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.25;
+}
+
+.dialogue-box.is-quest-complete {
+  z-index: 8;
+  left: 50%;
+  right: auto;
+  top: 48px;
+  bottom: auto;
+  width: min(88%, 440px);
+  min-height: 0;
+  padding: 10px 12px;
+  transform: translateX(-50%);
+  border: 4px solid #10151b;
+  outline: 2px solid #f2bd45;
+  outline-offset: -7px;
+  background: #202834;
+  box-shadow: 6px 6px 0 #000;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: quest-complete-enter 180ms steps(4, end) both;
+}
+
+.dialogue-box.is-quest-complete.is-leaving {
+  animation: quest-complete-leave 160ms steps(3, end) both;
+}
+
+.quest-completion-content {
+  display: grid;
+  gap: 4px;
+  padding: 2px 4px;
+}
+
+.quest-completion-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #ffe36c;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.quest-completion-check {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border: 2px solid #10151b;
+  background: #75c77a;
+  color: #10151b;
+  box-shadow: 2px 2px 0 #000;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.quest-completion-name {
+  color: #fff8d6;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.dialogue-box .quest-completion-summary {
+  color: #dce8e3;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.quest-completion-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding-top: 3px;
+  border-top: 2px solid #46505d;
+}
+
+.quest-completion-rewards span {
+  color: #9ff0a4;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.dialogue-box .quest-completion-next {
+  color: #ffdca1;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+@keyframes quest-complete-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+@keyframes quest-complete-leave {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -5px);
+  }
 }
 
 .panel-overlay,
@@ -1094,15 +1430,26 @@ body.is-immortal-intro .game-frame {
 
 .map-navigation-route {
   fill: none;
-  stroke: #d84b42;
-  stroke-width: 4px;
+  stroke: #fff068;
+  stroke-width: 5px;
   stroke-linecap: square;
   stroke-linejoin: bevel;
-  stroke-dasharray: 8 6;
+  stroke-dasharray: 10 7;
+  animation: map-route-flow 900ms steps(6, end) infinite;
+}
+
+.map-navigation-route.is-shadow {
+  stroke: #151515;
+  stroke-width: 9px;
+  animation: none;
 }
 
 @keyframes map-objective-pulse {
   50% { opacity: 0.62; }
+}
+
+@keyframes map-route-flow {
+  to { stroke-dashoffset: -17; }
 }
 
 .map-marker-companion-return rect {
@@ -1834,6 +2181,34 @@ body.is-immortal-intro .game-frame {
     font-size: 12px;
   }
 
+  .hud-objective {
+    min-height: 31px;
+    padding: 2px 4px;
+  }
+
+  .hud-objective strong {
+    font-size: 8px;
+  }
+
+  .hud-objective-text {
+    font-size: 7px;
+  }
+
+  .dialogue-box.is-quest-complete {
+    top: 40px;
+    bottom: auto;
+    width: calc(100% - 20px);
+    padding: 8px 10px;
+  }
+
+  .quest-completion-heading {
+    font-size: 10px;
+  }
+
+  .quest-completion-name {
+    font-size: 12px;
+  }
+
   .dialogue-box {
     left: 6px;
     right: 6px;
@@ -1844,6 +2219,76 @@ body.is-immortal-intro .game-frame {
 
   .dialogue-box p {
     font-size: 15px;
+  }
+
+  .cutscene-dialogue,
+  .cutscene-dialogue.is-cinematic-dialogue {
+    bottom: 8px;
+    width: calc(100% - 16px);
+    max-height: min(72%, 390px);
+    padding: 9px 10px 8px;
+    border-width: 3px;
+    box-shadow:
+      inset 0 0 0 1px rgba(219, 185, 95, 0.26),
+      4px 4px 0 #000;
+  }
+
+  .cutscene-dialogue.has-mo-portrait {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .cutscene-portrait {
+    border-width: 2px;
+    box-shadow:
+      0 0 0 1px #8d794a,
+      3px 3px 0 #000;
+  }
+
+  .cutscene-dialogue-header {
+    padding: 3px 7px 4px;
+    border-left-width: 3px;
+  }
+
+  .cutscene-kind {
+    font-size: 8px;
+  }
+
+  .cutscene-speaker {
+    font-size: 13px;
+  }
+
+  .cutscene-text {
+    max-height: min(22vh, 112px);
+    margin-top: 7px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .cutscene-choices {
+    gap: 4px;
+    max-height: min(27vh, 145px);
+    margin-top: 7px;
+  }
+
+  .cutscene-choices button {
+    min-height: 31px;
+    padding: 5px 7px 5px 25px;
+    font-size: 10px;
+  }
+
+  .cutscene-choices button::before {
+    left: 7px;
+  }
+
+  .cutscene-dialogue-footer {
+    min-height: 15px;
+    margin-top: 6px;
+    padding-top: 4px;
+  }
+
+  .cutscene-hint {
+    font-size: 9px;
   }
 
   .ending-journal-content {
@@ -1902,5 +2347,48 @@ body.is-immortal-intro .game-frame {
 
   .map-svg {
     min-height: 240px;
+  }
+}
+
+@media (max-height: 540px) {
+  .cutscene-dialogue,
+  .cutscene-dialogue.is-cinematic-dialogue {
+    bottom: 6px;
+    max-height: calc(100% - 12px);
+    padding-top: 7px;
+    padding-bottom: 6px;
+  }
+
+  .cutscene-dialogue.has-mo-portrait {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .cutscene-text {
+    max-height: 82px;
+    margin-top: 5px;
+    font-size: 10px;
+    line-height: 1.32;
+  }
+
+  .cutscene-choices {
+    max-height: 112px;
+    margin-top: 5px;
+  }
+
+  .cutscene-choices button {
+    min-height: 27px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 9px;
+  }
+
+  .cutscene-dialogue-footer {
+    margin-top: 4px;
+    padding-top: 3px;
+  }
+
+  .cutscene-hint {
+    font-size: 8px;
   }
 }

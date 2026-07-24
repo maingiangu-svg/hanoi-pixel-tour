@@ -5,7 +5,7 @@ import { handleJournalKey, isJournalOpen, toggleJournal } from "./systems/journa
 import { handleQuestLogKey, isQuestLogOpen, toggleQuestLog } from "./systems/questSystem.js";
 import { answerQuiz, closeQuiz, confirmSelectedQuizOption, moveQuizSelection, selectQuizOption } from "./systems/quiz.js";
 import { confirmReset } from "./storage.js";
-import { activateSelectedChoiceAction, activateSelectedInfoAction, closeAllOverlays, closeChoiceModal, closeInfoModal, isOverlayOpen, moveChoiceActionSelection, moveInfoActionSelection } from "./systems/modal.js";
+import { activateSelectedChoiceAction, activateSelectedInfoAction, closeAllOverlays, closeChoiceModal, closeInfoModal, dismissQuestCompletionNotification, isOverlayOpen, isQuestCompletionNotificationActive, moveChoiceActionSelection, moveInfoActionSelection } from "./systems/modal.js";
 import { handleCharacterSelectionKey, isCharacterSelectionOpen, openCharacterSelection } from "./systems/characterSelection.js";
 import { toggleVehicle } from "./systems/vehicle.js";
 import { closeMapOverlay, handleMapOverlayKey, isMapOverlayOpen, toggleMapOverlay } from "./systems/mapOverlay.js";
@@ -43,6 +43,11 @@ export function initInput() {
     if (event.repeat && gameClockDebugKeys.includes(key)) return;
 
     if (handleGameClockTimeScaleDebugKey(key)) return;
+
+    if (isQuestCompletionNotificationActive() && key === "enter") {
+      dismissQuestCompletionNotification();
+      return;
+    }
 
     if (isCutsceneActive()) {
       handleCutsceneKey(key);
@@ -191,4 +196,10 @@ export function initInput() {
   ui.closeJournal.addEventListener("click", () => ui.journalPanel.classList.add("hidden"));
   ui.closeMap.addEventListener("click", closeMapOverlay);
   ui.quizContinue.addEventListener("click", closeQuiz);
+  ui.dialogueBox.addEventListener("click", (event) => {
+    if (!isQuestCompletionNotificationActive()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dismissQuestCompletionNotification();
+  });
 }

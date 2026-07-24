@@ -1,13 +1,12 @@
-import { ctx, state, ui } from "../state.js";
+import { ctx, runtime, state, ui } from "../state.js";
 import { getCurrentMap } from "../utils/helpers.js";
 import { formatGameTimeHud } from "../utils/gameTime.js";
 import { renderInventory } from "../systems/inventory.js";
 import { renderJournal } from "../systems/journal.js";
-import { getCurrentObjective, renderQuestLog } from "../systems/questSystem.js";
+import { getActiveQuestHud, renderQuestLog } from "../systems/questSystem.js";
 import { getVehicleData, isRidingVehicle, isVehicleOwned, isWalkingBike } from "../systems/vehicle.js";
 import { getVehicleParkingLabel, isVehicleParked } from "../systems/parking.js";
 import { getCurrentAreaAmbience } from "../systems/areaAmbience.js";
-import { getNavigationHudText } from "../systems/navigation.js";
 
 export function drawPixelRect(x, y, width, height, fill, stroke, strokeWidth) {
   ctx.fillStyle = fill;
@@ -65,9 +64,7 @@ export function wrapCanvasText(text, maxWidth) {
 export function updateHud() {
   ui.hudMapName.textContent = getCurrentAreaAmbience().profile.label || getCurrentMap().name;
   updateClockHud();
-  ui.hudObjective.textContent = state.moCompanion?.active
-    ? "Đưa Mơ về Nhà thờ Lớn để thời gian tiếp tục."
-    : (getNavigationHudText() || getCurrentObjective());
+  updateActiveQuestHud();
 
   if (isVehicleOwned()) {
     const vehicle = getVehicleData();
@@ -94,6 +91,35 @@ export function updateHud() {
   if (!ui.journalPanel.classList.contains("hidden")) {
     renderJournal();
   }
+}
+
+function updateActiveQuestHud() {
+  const quest = state.moCompanion?.active
+    ? {
+      title: "Đưa Mơ về Nhà thờ Lớn",
+      objective: "Đưa Mơ về để thời gian tiếp tục.",
+      distanceText: "",
+      key: "mo:return"
+    }
+    : getActiveQuestHud();
+
+  ui.hudObjectiveCard.classList.toggle("hidden", !quest);
+  if (!quest) return;
+  ui.hudQuestName.textContent = quest.title;
+  ui.hudObjective.textContent = quest.objective;
+  ui.hudObjectiveMeta.textContent = quest.distanceText || "";
+  ui.hudObjectiveMeta.classList.toggle("hidden", !quest.distanceText);
+
+  if (runtime.hudObjectiveKey && runtime.hudObjectiveKey !== quest.key) {
+    ui.hudObjectiveLabel.textContent = "MỤC TIÊU MỚI";
+    ui.hudObjectiveCard.classList.add("is-updated");
+    window.clearTimeout(runtime.hudObjectiveTimer);
+    runtime.hudObjectiveTimer = window.setTimeout(() => {
+      ui.hudObjectiveLabel.textContent = "NHIỆM VỤ ĐANG THEO DÕI";
+      ui.hudObjectiveCard.classList.remove("is-updated");
+    }, 2200);
+  }
+  runtime.hudObjectiveKey = quest.key;
 }
 
 export function updateClockHud() {

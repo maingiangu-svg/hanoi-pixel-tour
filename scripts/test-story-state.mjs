@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   STORY_VERSION,
   createDefaultStoryState,
+  normalizeMoRelationship,
   normalizeStoryState
 } from "../src/data/storyState.js";
 
@@ -13,6 +14,7 @@ const fresh = createDefaultStoryState();
 assert.equal(fresh.version, STORY_VERSION);
 assert.equal(fresh.currentScene, "gender-selection");
 assert.equal(fresh.introCompleted, false);
+assert.deepEqual(fresh.moRelationship, { trust: 0, suspicion: 0 });
 
 const legacy = normalizeStoryState(null, {
   profile: { gender: "male" },
@@ -21,6 +23,7 @@ const legacy = normalizeStoryState(null, {
 }, mapIds);
 assert.equal(legacy.introCompleted, true);
 assert.deepEqual(legacy.unlockedMaps, mapIds);
+assert.deepEqual(legacy.moRelationship, fresh.moRelationship, "Save cũ phải nhận relationship mặc định");
 
 const partialLegacy = normalizeStoryState({
   version: 1,
@@ -68,4 +71,10 @@ assert.equal(checkpoint.visualState.fadeAlpha, 1);
 assert.equal(checkpoint.visualState.lightingAlpha, 0);
 assert.deepEqual(checkpoint.cameraState, { locked: true, focusX: 1900, focusY: 620, zoom: 2.2 });
 
-process.stdout.write("Story state tests: OK (fresh, legacy migration, checkpoint restore)\n");
+assert.deepEqual(
+  normalizeMoRelationship({ trust: 999, closeness: -20, concern: "bad", suspicion: 42 }),
+  { trust: 100, suspicion: 42 },
+  "Relationship phải clamp và fallback dữ liệu sai kiểu"
+);
+
+process.stdout.write("Story state tests: OK (fresh, legacy migration, compact relationship clamp, checkpoint)\n");

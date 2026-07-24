@@ -5,7 +5,7 @@ import { loadGame, saveGame, setAfterSaveHandler } from "./storage.js";
 import { movePlayer } from "./systems/movement.js";
 import { updateNearbyInteractable } from "./systems/interaction.js";
 import { handlePendingVictory } from "./systems/questSystem.js";
-import { setInfoCloseHandler, showMessage } from "./systems/modal.js";
+import { setInfoCloseHandler, showMessage, updateNotifications } from "./systems/modal.js";
 import { initCharacterSelection, openCharacterSelection } from "./systems/characterSelection.js";
 import { addUnique, placePlayerAtSafeStart } from "./utils/helpers.js";
 import { isPlayerAreaWalkable } from "./utils/collision.js";
@@ -57,6 +57,7 @@ function gameLoop(timestamp) {
   if (!gameplayLocked) movePlayer();
   if (!gameplayLocked) updateBranchingQuests();
   updateTrackedObjective();
+  updateNotifications();
   if (!isDialogueViewActive()) {
     updateNpcReactions(timestamp);
     updateCamera();
