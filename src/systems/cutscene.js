@@ -7,6 +7,7 @@ import { endEnvironmentInteraction, isEnvironmentInteractionActive } from "./env
 import { closePhotoMode, isPhotoModeActive } from "./photoMode.js";
 import { pauseGameClock, resumeGameClock } from "./gameClock.js";
 import { exitViewMode, isViewModeActive } from "./viewMode.js";
+import { clearMoDialoguePortrait, renderMoDialoguePortrait } from "../render/renderNpcCloseup.js";
 import {
   addMemoryClue,
   addStoryScore,
@@ -567,9 +568,17 @@ function updateShake(cutscene, timestamp) {
 }
 
 function renderCutsceneDialogue() {
-  const dialogue = runtime.cutscene?.dialogue;
+  const cutscene = runtime.cutscene;
+  const dialogue = cutscene?.dialogue;
   if (!dialogue || !ui.cutsceneDialogue) return;
-  ui.cutsceneDialogue.className = `cutscene-dialogue is-${dialogue.kind}`;
+  const wasHidden = ui.cutsceneDialogue.classList.contains("hidden");
+  const hadPortrait = ui.cutsceneDialogue.classList.contains("has-mo-portrait");
+  ui.cutsceneDialogue.className = [
+    "cutscene-dialogue",
+    `is-${dialogue.kind}`,
+    wasHidden ? "is-opening" : "",
+    hadPortrait ? "has-mo-portrait" : ""
+  ].filter(Boolean).join(" ");
   ui.cutsceneKind.textContent = dialogue.kind === "internal"
     ? "Độc thoại nội tâm"
     : dialogue.kind === "narration" ? "Lời dẫn" : "Hội thoại";
@@ -577,30 +586,47 @@ function renderCutsceneDialogue() {
   ui.cutsceneSpeaker.classList.toggle("hidden", !dialogue.speaker);
   ui.cutsceneText.textContent = dialogue.text;
   ui.cutsceneChoices.innerHTML = "";
+  ui.cutsceneChoices.removeAttribute?.("aria-activedescendant");
   dialogue.choices.forEach((choice, index) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.id = `cutscene-choice-${index}`;
     button.dataset.choiceIndex = String(index);
     button.className = index === dialogue.selectedIndex ? "is-selected" : "";
+    button.disabled = Boolean(choice.disabled);
+    button.setAttribute("aria-pressed", String(index === dialogue.selectedIndex));
     button.textContent = choice.text;
     ui.cutsceneChoices.appendChild(button);
   });
+  if (dialogue.selectedIndex >= 0) {
+    ui.cutsceneChoices.setAttribute("aria-activedescendant", `cutscene-choice-${dialogue.selectedIndex}`);
+  }
+  const exitHint = cutscene.allowSkip ? "   •   Esc: Bỏ qua" : "";
   ui.cutsceneHint.textContent = dialogue.choices.length
-    ? "W/S hoặc ↑/↓: Chọn · Enter: Xác nhận"
-    : "Enter/Space: Tiếp tục";
+    ? `W/S hoặc ↑/↓: Chọn   •   Enter: Xác nhận${exitHint}`
+    : `Enter/Space: Tiếp tục${exitHint}`;
+  ui.cutsceneContinue?.classList.toggle("hidden", Boolean(dialogue.choices.length));
+  renderMoDialoguePortrait(dialogue);
   ui.cutsceneDialogue.classList.remove("hidden");
 }
 
 function hideCutsceneDialogue() {
   ui.cutsceneDialogue?.classList.add("hidden");
+  ui.cutsceneDialogue?.classList.remove("is-opening");
   if (ui.cutsceneChoices) ui.cutsceneChoices.innerHTML = "";
+  ui.cutsceneContinue?.classList.add("hidden");
+  clearMoDialoguePortrait();
 }
 
 function handleChoiceClick(event) {
   const button = event.target.closest("button[data-choice-index]");
   const dialogue = runtime.cutscene?.dialogue;
-  if (!button || !dialogue?.choices?.length) return;
-  dialogue.selectedIndex = Number(button.dataset.choiceIndex);
+  if (!button || !dialogue?.choices?.length || button.disabled) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const index = Number(button.dataset.choiceIndex);
+  if (!Number.isInteger(index) || !dialogue.choices[index]) return;
+  dialogue.selectedIndex = index;
   renderCutsceneDialogue();
   advanceCutscene();
 }

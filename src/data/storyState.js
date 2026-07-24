@@ -1,3 +1,9 @@
+import {
+  MO_RELATIONSHIP_DEFAULTS,
+  MO_RELATIONSHIP_MAX,
+  MO_RELATIONSHIP_MIN
+} from "./moReactions.js";
+
 export const STORY_VERSION = 2;
 
 export const STORY_SCORE_TYPES = Object.freeze([
@@ -22,6 +28,7 @@ export function createDefaultStoryState() {
     scores: Object.fromEntries(STORY_SCORE_TYPES.map((type) => [type, 0])),
     choices: {},
     flags: {},
+    moRelationship: { ...MO_RELATIONSHIP_DEFAULTS },
     endingId: null,
     completedChapters: [],
     checkpoint: null
@@ -50,6 +57,7 @@ export function normalizeStoryState(rawStory, savedState, availableMapIds = []) 
     scores: normalizeScores(raw.scores),
     choices: normalizeRecord(raw.choices),
     flags: normalizeRecord(raw.flags),
+    moRelationship: normalizeMoRelationship(raw.moRelationship),
     endingId: normalizeNullableText(raw.endingId),
     completedChapters: normalizeStringList(raw.completedChapters),
     checkpoint: normalizeCheckpoint(raw.checkpoint)
@@ -90,6 +98,20 @@ function normalizeScores(rawScores) {
     type,
     Number.isFinite(Number(source[type])) ? Number(source[type]) : 0
   ]));
+}
+
+export function normalizeMoRelationship(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(Object.entries(MO_RELATIONSHIP_DEFAULTS).map(([key, fallback]) => {
+    const numeric = Number(source[key]);
+    return [
+      key,
+      Math.max(
+        MO_RELATIONSHIP_MIN,
+        Math.min(MO_RELATIONSHIP_MAX, Number.isFinite(numeric) ? numeric : fallback)
+      )
+    ];
+  }));
 }
 
 function normalizeCheckpoint(rawCheckpoint) {

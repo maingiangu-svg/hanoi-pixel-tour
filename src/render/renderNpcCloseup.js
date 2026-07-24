@@ -1,5 +1,14 @@
-import { canvas, ctx } from "../state.js";
-import { getNpcExpression } from "../data/npcPortraits.js";
+import { canvas as gameCanvas, ctx as gameContext, ui } from "../state.js";
+import {
+  getNpcExpression,
+  getNpcPortrait,
+  resolveMoDialogueExpression,
+  resolvePortraitIdForSpeaker
+} from "../data/npcPortraits.js";
+
+let canvas = gameCanvas;
+let ctx = gameContext;
+let lastDialoguePortraitKey = "";
 
 export function drawNpcCloseup(view, timestamp = performance.now()) {
   const profile = view.profile;
@@ -30,6 +39,86 @@ export function drawNpcCloseup(view, timestamp = performance.now()) {
   drawAccessory(profile, baseX, baseY, unit, view.pose, elapsed);
   ctx.restore();
   return true;
+}
+
+export function renderMoDialoguePortrait({ speaker, portraitId, expression, pose = "idle" } = {}) {
+  const isMo = portraitId === "mo" || resolvePortraitIdForSpeaker(speaker) === "mo";
+  if (!isMo) {
+    clearMoDialoguePortrait();
+    return false;
+  }
+
+  const profile = getNpcPortrait("mo");
+  const portraitCanvas = ui.cutscenePortraitCanvas;
+  const portraitContainer = ui.cutscenePortrait;
+  if (!profile || !portraitCanvas || !portraitContainer) return false;
+
+  const requestedExpression = resolveMoDialogueExpression(expression);
+  let renderedExpression = requestedExpression;
+  try {
+    drawDialoguePortraitCanvas(portraitCanvas, profile, requestedExpression, pose);
+  } catch {
+    renderedExpression = "idle";
+    try {
+      drawDialoguePortraitCanvas(portraitCanvas, profile, renderedExpression, "idle");
+    } catch {
+      clearMoDialoguePortrait();
+      return false;
+    }
+  }
+
+  const portraitKey = `${renderedExpression}:${pose}`;
+  if (portraitKey !== lastDialoguePortraitKey) {
+    portraitContainer.classList.remove("is-changing");
+    void portraitContainer.offsetWidth;
+    portraitContainer.classList.add("is-changing");
+    lastDialoguePortraitKey = portraitKey;
+  }
+  portraitContainer.dataset.expression = renderedExpression;
+  portraitContainer.classList.remove("hidden");
+  ui.cutsceneDialogue?.classList.add("has-mo-portrait");
+  return true;
+}
+
+export function clearMoDialoguePortrait() {
+  ui.cutscenePortrait?.classList.add("hidden");
+  ui.cutscenePortrait?.classList.remove("is-changing");
+  ui.cutsceneDialogue?.classList.remove("has-mo-portrait");
+  if (ui.cutscenePortrait?.dataset) delete ui.cutscenePortrait.dataset.expression;
+  const portraitContext = ui.cutscenePortraitCanvas?.getContext?.("2d");
+  portraitContext?.clearRect(0, 0, ui.cutscenePortraitCanvas.width, ui.cutscenePortraitCanvas.height);
+  lastDialoguePortraitKey = "";
+}
+
+function drawDialoguePortraitCanvas(targetCanvas, profile, expressionId, pose) {
+  const targetContext = targetCanvas.getContext("2d");
+  if (!targetContext) throw new Error("Dialogue portrait canvas is unavailable");
+  const previousCanvas = canvas;
+  const previousContext = ctx;
+  canvas = targetCanvas;
+  ctx = targetContext;
+  try {
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#17232a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#243b40";
+    ctx.fillRect(0, Math.floor(canvas.height * 0.58), canvas.width, Math.ceil(canvas.height * 0.42));
+
+    const unit = Math.max(1, Math.floor(Math.min(canvas.width / 96, canvas.height / 104)));
+    const expression = getNpcExpression(profile, expressionId);
+    const baseX = Math.round(canvas.width / 2 + expression.head * unit);
+    const baseY = canvas.height - 4 * unit;
+    drawPortraitShadow(baseX, baseY, unit);
+    drawTorso(profile, baseX, baseY, unit, pose, 0);
+    drawNeck(profile, baseX, baseY, unit);
+    drawHead(profile, expression, baseX, baseY, unit, false, 0);
+    drawHair(profile, baseX, baseY, unit, 0);
+    drawAccessory(profile, baseX, baseY, unit, pose, 0);
+  } finally {
+    canvas = previousCanvas;
+    ctx = previousContext;
+  }
 }
 
 function drawPortraitShadow(x, y, unit) {

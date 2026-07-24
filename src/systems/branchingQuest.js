@@ -7,8 +7,10 @@ import { addUnique, getPlayerCenter, placePlayerAtSafeStart } from "../utils/hel
 import { isPlayerAreaWalkable } from "../utils/collision.js";
 import { formatMoney } from "../utils/format.js";
 import { beginMapTransition } from "./mapTransition.js";
-import { closeChoiceModal, openChoiceModal, showMessage } from "./modal.js";
+import { closeChoiceModal, openChoiceModal, showMessage, showQuestCompletionNotification } from "./modal.js";
 import { isMoCompanionActive, syncMoCompanionToPlayer } from "./moCompanion.js";
+import { recordMoQuestOutcome } from "./moRelationship.js";
+import { updateTrackedObjective } from "./navigation.js";
 import { hydrateQuestFollower, startQuestFollower, updateQuestFollower } from "./questFollower.js";
 import { enterNpcDialogue, isNpcCinematicDialogueEnabled } from "./dialogueView.js";
 
@@ -105,19 +107,30 @@ export function completeQuestBranch(questId, outcome = "neutral") {
   progress.follower = null;
   applyQuestConsequence(questId);
 
-  let rewardText = "";
+  let reward = 0;
   if (!progress.rewardClaimed) {
-    const reward = Number(quest.rewards?.[outcome]) || 0;
+    reward = Number(quest.rewards?.[outcome]) || 0;
     if (reward > 0) {
       state.money += reward;
-      rewardText = ` Bạn nhận ${formatMoney(reward)}.`;
     }
     grantOutcomeItems(quest.outcomeItems?.[outcome]);
     progress.rewardClaimed = true;
   }
 
+  recordMoQuestOutcome(questId, outcome, progress, { save: false });
   saveGame();
-  showMessage(`${getOutcomeMessage(quest, outcome)}${rewardText}`);
+  updateTrackedObjective({ force: true });
+  if (outcome === "failed") {
+    showMessage(getOutcomeMessage(quest, outcome));
+    return true;
+  }
+  showQuestCompletionNotification({
+    completionId: `branching:${questId}`,
+    title: quest.title,
+    summary: getOutcomeMessage(quest, outcome),
+    rewards: reward > 0 ? [`+${formatMoney(reward)}`] : [],
+    nextObjective: "Mở Sổ nhiệm vụ để chọn mục tiêu tiếp theo."
+  });
   return true;
 }
 

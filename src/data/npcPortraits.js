@@ -1,9 +1,12 @@
 const EXPRESSIONS = Object.freeze({
+  idle: Object.freeze({ eyes: "center", brows: "level", mouth: "flat", head: 0 }),
   neutral: Object.freeze({ eyes: "center", brows: "level", mouth: "flat", head: 0 }),
+  smile: Object.freeze({ eyes: "soft", brows: "soft", mouth: "smile", head: -1 }),
   happy: Object.freeze({ eyes: "soft", brows: "raised", mouth: "smile", head: -1 }),
   gentleSmile: Object.freeze({ eyes: "soft", brows: "soft", mouth: "smile", head: -1 }),
   curious: Object.freeze({ eyes: "side", brows: "curious", mouth: "small", head: 2 }),
   concerned: Object.freeze({ eyes: "center", brows: "concerned", mouth: "small", head: 1 }),
+  suspect: Object.freeze({ eyes: "side", brows: "suspicious", mouth: "flat", head: 2 }),
   suspicious: Object.freeze({ eyes: "side", brows: "suspicious", mouth: "flat", head: 2 }),
   worried: Object.freeze({ eyes: "down", brows: "concerned", mouth: "small", head: 1 }),
   surprised: Object.freeze({ eyes: "wide", brows: "raised", mouth: "open", head: 0 }),
@@ -11,6 +14,25 @@ const EXPRESSIONS = Object.freeze({
   annoyed: Object.freeze({ eyes: "side", brows: "annoyed", mouth: "flat", head: -1 }),
   determined: Object.freeze({ eyes: "center", brows: "determined", mouth: "firm", head: 0 }),
   relieved: Object.freeze({ eyes: "soft", brows: "soft", mouth: "smile", head: 1 })
+});
+
+export const MO_DIALOGUE_EXPRESSIONS = Object.freeze([
+  "idle", "smile", "worried", "surprised", "sad", "suspect"
+]);
+
+const MO_EXPRESSION_ALIASES = Object.freeze({
+  idle: "idle",
+  neutral: "idle",
+  smile: "smile",
+  happy: "smile",
+  gentleSmile: "smile",
+  relieved: "smile",
+  worried: "worried",
+  concerned: "worried",
+  surprised: "surprised",
+  sad: "sad",
+  suspect: "suspect",
+  suspicious: "suspect"
 });
 
 export const NPC_PORTRAITS = Object.freeze({
@@ -26,7 +48,10 @@ export const NPC_PORTRAITS = Object.freeze({
     accent: "#f0c95d",
     hairStyle: "long",
     seed: 3,
-    expressions: ["neutral", "gentleSmile", "curious", "suspicious", "worried", "surprised", "sad", "determined", "relieved"]
+    expressions: [
+      ...MO_DIALOGUE_EXPRESSIONS,
+      "neutral", "gentleSmile", "curious", "suspicious", "determined", "relieved"
+    ]
   }),
   teaSeller: portrait({
     name: "Cô bán trà đá",
@@ -186,6 +211,10 @@ export function getNpcExpression(profile, expressionId) {
   const allowed = profile?.expressions || ["neutral"];
   const id = allowed.includes(expressionId) ? expressionId : "neutral";
   return EXPRESSIONS[id] || EXPRESSIONS.neutral;
+}
+
+export function resolveMoDialogueExpression(expressionId) {
+  return MO_EXPRESSION_ALIASES[expressionId] || "idle";
 }
 
 export function isCinematicDialogueNpc(npcOrId) {

@@ -41,13 +41,14 @@ export const HANOI_ARRIVAL_TIMELINE = Object.freeze([
   { type: "dialogue", kind: "speech", speaker: "Cô bán trà đá", text: "Cháu tỉnh rồi à? Ngồi yên đấy, cô lấy cốc nước." },
   { type: "dialogue", kind: "speech", speaker: "Chú xe ôm", text: "Ăn mặc lạ thế. Cháu quay phim ở đâu rồi đi lạc à?" },
   { type: "dialogue", kind: "speech", speaker: "Sinh viên Hà Nội", text: "Chắc bạn ấy bị mất trí nhớ." },
-  { type: "dialogue", kind: "speech", speaker: "Mơ", text: "Bạn còn nhớ tên mình không? Bạn từ đâu tới?" },
+  { type: "dialogue", kind: "speech", speaker: "Mơ", text: "Bạn còn nhớ tên mình không? Bạn từ đâu tới?", expression: "worried" },
   { type: "dialogue", kind: "speech", speaker: "Bạn", text: "Ta đến từ một nơi rất xa. Xa hơn bất kỳ con đường nào các vị biết." },
   {
     type: "dialogue",
     kind: "speech",
     speaker: "Mơ",
     text: "Vậy bạn muốn làm gì bây giờ?",
+    expression: "idle",
     choices: Object.freeze([
       Object.freeze({
         id: "return",
@@ -76,7 +77,7 @@ export const HANOI_ARRIVAL_TIMELINE = Object.freeze([
     type: "choiceDialogue",
     choiceKey: "originChoice",
     entries: Object.freeze({
-      return: Object.freeze({ kind: "speech", speaker: "Mơ", text: "Muốn tìm đường về, trước hết bạn phải hiểu nơi mình đang đứng." }),
+      return: Object.freeze({ kind: "speech", speaker: "Mơ", text: "Muốn tìm đường về, trước hết bạn phải hiểu nơi mình đang đứng.", expression: "idle" }),
       stay: Object.freeze({ kind: "speech", speaker: "Cô bán trà đá", text: "Thế thì cứ bắt đầu chậm thôi. Hà Nội chẳng chạy mất đâu." }),
       investigate: Object.freeze({ kind: "speech", speaker: "Sinh viên Hà Nội", text: "Những nơi lâu đời của Hà Nội có thể giúp bạn tìm câu trả lời." })
     })
@@ -84,12 +85,12 @@ export const HANOI_ARRIVAL_TIMELINE = Object.freeze([
   { type: "sceneState", patch: { attention: "lake" }, animation: "lookLake", duration: 360 },
   { type: "dialogue", kind: "speech", speaker: "Bạn", text: "Hồ… Hoàn Kiếm?" },
   { type: "wait", duration: 420 },
-  { type: "dialogue", kind: "speech", speaker: "Mơ", text: "Bạn vừa nói gì?" },
+  { type: "dialogue", kind: "speech", speaker: "Mơ", text: "Bạn vừa nói gì?", expression: "surprised" },
   { type: "dialogue", kind: "speech", speaker: "Bạn", text: "Ta không biết. Cái tên ấy tự xuất hiện trong đầu." },
   { type: "suspicion", active: true, entityId: "arrival-mo", zoom: 1.82, audioDuck: 0.18, heartbeat: true },
   { type: "camera", entityId: "arrival-mo", zoom: 1.82, duration: 520, trackEntity: true },
-  { type: "dialogue", kind: "internal", speaker: "Mơ (nghĩ)", text: "Chưa có ai nói cho người này biết tên hồ…" },
-  { type: "dialogue", kind: "internal", speaker: "Mơ (nghĩ)", text: "Vậy tại sao lại biết?" },
+  { type: "dialogue", kind: "internal", speaker: "Mơ (nghĩ)", text: "Chưa có ai nói cho người này biết tên hồ…", expression: "suspect" },
+  { type: "dialogue", kind: "internal", speaker: "Mơ (nghĩ)", text: "Vậy tại sao lại biết?", expression: "suspect" },
   { type: "storyClue", clueId: HANOI_ARRIVAL_CLUE },
   { type: "wait", duration: 380 },
   { type: "suspicion", active: false, audioDuck: 0.62 },
@@ -98,7 +99,8 @@ export const HANOI_ARRIVAL_TIMELINE = Object.freeze([
     type: "dialogue",
     kind: "speech",
     speaker: "Mơ",
-    text: "Dù sao, mình sẽ dẫn bạn đi một vòng. Có lẽ nơi này sẽ giúp bạn nhớ lại."
+    text: "Dù sao, mình sẽ dẫn bạn đi một vòng. Có lẽ nơi này sẽ giúp bạn nhớ lại.",
+    expression: "smile"
   },
   { type: "sceneState", patch: { playerPose: "standing", attention: "player" }, animation: "stand", duration: 320 },
   { type: "camera", entityId: "player", zoom: 1.08, duration: 420, trackEntity: true },

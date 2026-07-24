@@ -164,6 +164,7 @@ function drawNavigationRoute(svg, transform, mapId) {
   const route = getCurrentRoute();
   if (route.length < 2 || getResolvedObjective()?.mapId !== mapId) return;
   const points = route.map((point) => `${transform.x(point.x)},${transform.y(point.y)}`).join(" ");
+  svg.appendChild(createSvg("polyline", { points, class: "map-navigation-route is-shadow" }));
   svg.appendChild(createSvg("polyline", { points, class: "map-navigation-route" }));
 }
 
@@ -307,7 +308,13 @@ function addMarker(svg, x, y, transform, className, icon, label) {
   const sx = transform.x(x);
   const sy = transform.y(y);
   const group = createSvg("g", { class: className });
-  group.appendChild(createSvg("rect", { x: sx - 7, y: sy - 7, width: 14, height: 14 }));
+  const markerSize = className.includes("map-marker-objective") ? 18 : 14;
+  group.appendChild(createSvg("rect", {
+    x: sx - markerSize / 2,
+    y: sy - markerSize / 2,
+    width: markerSize,
+    height: markerSize
+  }));
   const text = createSvg("text", { x: sx, y: sy + 4, "text-anchor": "middle" });
   text.textContent = icon;
   group.appendChild(text);

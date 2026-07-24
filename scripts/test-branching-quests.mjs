@@ -59,7 +59,7 @@ globalThis.localStorage = { values: new Map(), getItem(key) { return this.values
 
 const stateModule = await import("../src/state.js");
 const { branchingQuests, branchingQuestActors } = await import("../src/data/branchingQuests.js");
-const { normalizeState } = await import("../src/storage.js");
+const { confirmReset, normalizeState } = await import("../src/storage.js");
 const { isNpcAreaWalkable } = await import("../src/utils/collision.js");
 const {
   advanceQuestNode,
@@ -75,7 +75,14 @@ const {
   updateBranchingQuests
 } = await import("../src/systems/branchingQuest.js");
 const { canUseVehicleWithQuestFollower, getQuestFollowersForMap } = await import("../src/systems/questFollower.js");
-const { handleDialogueViewKey, updateDialogueView } = await import("../src/systems/dialogueView.js");
+const { handleDialogueViewKey, hydrateDialogueView, updateDialogueView } = await import("../src/systems/dialogueView.js");
+const {
+  getMoRelationshipDebugState,
+  getMoRelationshipState,
+  getPendingMoReaction,
+  markMoReactionShown
+} = await import("../src/systems/moRelationship.js");
+const { setStoryChoice } = await import("../src/systems/storyState.js");
 
 function reset(overrides = {}) {
   stateModule.setState(normalizeState({ ...overrides, profile: { gender: "female" } }));
@@ -142,8 +149,21 @@ assert.equal(getCurrentQuestNode("lostTourist").type, "choice");
 assert.equal(chooseQuestOption("lostTourist", "correctDirection"), true);
 assert.equal(getQuestOutcome("lostTourist"), "good");
 assert.equal(stateModule.state.money, 62000);
+assert(getMoRelationshipDebugState().appliedActions.includes("helped-lost-tourist"));
+assert.equal(getMoRelationshipState().trust, 10);
+const trustAfterTourist = getMoRelationshipState().trust;
 assert.equal(completeQuestBranch("lostTourist", "excellent"), false, "Không nhận thưởng lần hai");
 assert.equal(stateModule.state.money, 62000);
+assert.equal(getMoRelationshipState().trust, trustAfterTourist, "Cùng quest không được cộng relationship hai lần");
+const positiveReload = normalizeState(JSON.parse(JSON.stringify(stateModule.state)));
+assert.equal(positiveReload.story.moRelationship.trust, 10, "Relationship phải tồn tại sau reload");
+stateModule.setState(positiveReload);
+assert.equal(getPendingMoReaction()?.expression, "smile");
+const positiveReaction = getPendingMoReaction();
+assert.equal(markMoReactionShown(positiveReaction.id, { save: false }), true);
+const positiveReloadAfterReaction = normalizeState(JSON.parse(JSON.stringify(stateModule.state)));
+stateModule.setState(positiveReloadAfterReaction);
+assert.notEqual(getPendingMoReaction()?.id, positiveReaction.id, "Reaction once không được phát lại sau reload");
 
 reset({ money: 50000 });
 startBranchingQuest("lostTourist");
@@ -197,5 +217,34 @@ stateModule.player.y = 1004;
 updateBranchingQuests();
 assert.equal(getQuestOutcome("moDestination"), "good");
 
+reset();
+const suspicionBefore = getMoRelationshipState().suspicion;
+setStoryChoice("originChoice", "investigate", { save: false });
+assert.equal(getMoRelationshipState().suspicion, suspicionBefore + 12, "Lựa chọn đáng ngờ phải tăng suspicion");
+setStoryChoice("originChoice", "investigate", { save: false });
+assert.equal(getMoRelationshipState().suspicion, suspicionBefore + 12, "Cùng story choice không được cộng relationship hai lần");
+assert.equal(getPendingMoReaction()?.id, "mo_choice_investigate");
+assert.equal(getPendingMoReaction()?.expression, "suspect");
+
+reset();
+setStoryChoice("originChoice", "stay", { save: false });
+assert.equal(getMoRelationshipState().trust, 12, "Lựa chọn quan tâm phải tăng trust");
+assert.equal(getPendingMoReaction()?.id, "mo_choice_stay");
+assert.equal(getPendingMoReaction()?.expression, "smile");
+markMoReactionShown("mo_choice_stay", { save: false });
+assert.equal(getPendingMoReaction()?.id, "mo_attitude_trusting", "Câu thoại sau phải phản ánh trust");
+
+reset();
+setStoryChoice("chapter2RelationshipChoice", "truth", { save: false });
+assert.equal(getMoRelationshipState().suspicion, 15);
+assert.equal(getPendingMoReaction()?.id, "mo_choice_truth");
+markMoReactionShown("mo_choice_truth", { save: false });
+assert.equal(getPendingMoReaction()?.id, "mo_attitude_cautious", "Câu thoại sau phải phản ánh suspicion");
+
+hydrateDialogueView();
+assert.equal(confirmReset(), true);
+assert.deepEqual(getMoRelationshipState(), { trust: 0, suspicion: 0 });
+assert.deepEqual(getMoRelationshipDebugState().appliedActions, [], "Reset game phải xóa relationship flags");
+
 clearTimeout(stateModule.runtime.messageTimer);
-process.stdout.write("Branching quest tests: OK (8 quests, migration, rewards, followers, photo, Mơ)\n");
+process.stdout.write("Branching quest tests: OK (8 quests, compact Mơ demo relationship, save/reload, reset)\n");

@@ -9,7 +9,7 @@ import { normalizeWeatherState } from "./data/weatherProfiles.js";
 import { photoSpotsById } from "./data/photoSpots.js";
 import { BRANCHING_OUTCOMES, branchingQuests } from "./data/branchingQuests.js";
 import { RANDOM_EVENT_IDS, randomEventsById } from "./data/randomEvents.js";
-import { isOverlayOpen, showMessage } from "./systems/modal.js";
+import { isOverlayOpen, resetQuestNotifications, showMessage } from "./systems/modal.js";
 import { normalizeStoryState } from "./data/storyState.js";
 import { viewpointsById } from "./data/viewpoints.js";
 
@@ -363,6 +363,7 @@ export function confirmReset() {
     console.warn("Không thể xoá lưu trữ trong trình duyệt này.", error);
   }
   setState(createDefaultState());
+  resetQuestNotifications();
   player.x = state.player.x;
   player.y = state.player.y;
   player.facing = "down";

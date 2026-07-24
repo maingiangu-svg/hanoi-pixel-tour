@@ -102,7 +102,7 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
     memoryFlash("distorted-name", 190),
     { type: "sceneState", patch: { flash: null } },
     speech("Bạn", "Ta đã từng nghe tiếng chuông này."),
-    speech("Mơ", "Bạn nói chưa từng tới Hà Nội."),
+    speech("Mơ", "Bạn nói chưa từng tới Hà Nội.", { expression: "worried" }),
     speech("Bạn", "Ta không hiểu."),
     { type: "storyClue", clueId: CHAPTER_2_CLUES.churchBell },
     { type: "letterbox", to: 0, duration: 220 }
@@ -111,19 +111,19 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
     speech("Cha xứ", "Có những ký ức không trở lại bằng hình ảnh, mà bằng một âm thanh ta từng nghe khi còn rất nhỏ.", { portraitId: "priest", expression: "concerned", pose: "explain" }),
     speech("Bạn", "Nếu tiếng chuông mở được một khe trong ký ức, con nên tìm phần còn lại ở đâu?"),
     speech("Cha xứ", "Hãy nhìn công trình, lắng nghe người sống quanh nó, rồi để ký ức tự tìm đường. Đừng ép nó.", { portraitId: "priest", expression: "gentleSmile", pose: "gesture" }),
-    speech("Mơ", "Mình sẽ giúp bạn tìm hiểu nơi này.", { portraitId: "mo", expression: "determined" })
+    speech("Mơ", "Mình sẽ giúp bạn tìm hiểu nơi này.", { portraitId: "mo", expression: "smile" })
   ]),
   children: Object.freeze([
     narration("Chiếc chong chóng giấy của bọn trẻ mắc trên một cành thấp cạnh sân."),
     speech("Bạn", "Đứng lùi lại. Ta không cần khinh công cho việc này."),
     narration("Bạn dùng một chiếc sào nhỏ gỡ món đồ xuống rồi trao lại cho bọn trẻ."),
-    speech("Mơ", "Bạn nói chuyện nghe lạ, nhưng bọn trẻ quý bạn rồi đấy."),
+    speech("Mơ", "Bạn nói chuyện nghe lạ, nhưng bọn trẻ quý bạn rồi đấy.", { expression: "smile" }),
     speech("Bạn", "Ở cạnh chúng, ta có cảm giác mình từng biết khoảng sân này.")
   ]),
   mass: Object.freeze([
     narration("Tiếng bước chân lắng xuống. Cha xứ đứng gần bàn thờ, còn giáo dân yên vị hai bên lối đi."),
     narration("Bạn ngồi ở một chỗ trống. Tiếng chuông nhỏ hòa với ánh kính màu và một ký ức chưa thành hình."),
-    speech("Mơ", "Mình đang dự lễ, lát nữa nói chuyện nhé."),
+    speech("Mơ", "Mình đang dự lễ, lát nữa nói chuyện nhé.", { expression: "idle" }),
     narration("Bạn khẽ gật đầu và tiếp tục quan sát trong yên lặng.")
   ]),
   oldPhoto: Object.freeze([
@@ -134,12 +134,12 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
     { type: "letterbox", to: 1, duration: 240 },
     { type: "camera", entityId: "mo", zoom: 1.9, duration: 520, trackEntity: true },
     { type: "suspicion", active: true, entityId: "mo", zoom: 1.9, audioDuck: 0.14, heartbeat: true },
-    internal("Chiếc mặt dây trong ảnh…"),
-    internal("Giống hệt."),
-    internal("Và khuôn mặt này… dù đã khác đi…"),
-    internal("Không thể chỉ là trùng hợp."),
+    internal("Chiếc mặt dây trong ảnh…", { expression: "suspect" }),
+    internal("Giống hệt.", { expression: "surprised" }),
+    internal("Và khuôn mặt này… dù đã khác đi…", { expression: "worried" }),
+    internal("Không thể chỉ là trùng hợp.", { expression: "suspect" }),
     narration("Mơ siết bức ảnh lại rồi giấu nó vào trong hộp."),
-    internal("Nhưng nếu mình nói ra mà sai thì sao?"),
+    internal("Nhưng nếu mình nói ra mà sai thì sao?", { expression: "sad" }),
     { type: "storyClue", clueId: CHAPTER_2_CLUES.oldPhoto },
     { type: "suspicion", active: false, audioDuck: 0.55 },
     { type: "cameraRestore", duration: 500 },
@@ -147,7 +147,7 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
     { type: "letterbox", to: 0, duration: 220 }
   ]),
   hangoutDestination: Object.freeze([
-    speech("Mơ", "Mặt hồ hôm nay dịu thật. Ở đây, mình luôn có cảm giác thành phố chịu chậm lại một chút."),
+    speech("Mơ", "Mặt hồ hôm nay dịu thật. Ở đây, mình luôn có cảm giác thành phố chịu chậm lại một chút.", { expression: "smile" }),
     speech("Bạn", "Có lẽ ký ức cũng cần một nơi đủ yên để quay về."),
     speech("Mơ", "Chúng mình chụp một bức ảnh nhé. Biết đâu sau này bạn sẽ cần nó để nhớ.")
   ]),
@@ -170,7 +170,7 @@ export const CHAPTER_2_CUTSCENES = Object.freeze({
       type: "choiceDialogue",
       choiceKey: "chapter2RelationshipChoice",
       entries: Object.freeze({
-        trust: speech("Mơ", "Mình chưa hiểu hết chuyện của bạn, nhưng mình tin những gì bạn đang cố nhớ.", { portraitId: "mo", expression: "gentleSmile" }),
+        trust: speech("Mơ", "Mình chưa hiểu hết chuyện của bạn, nhưng mình tin những gì bạn đang cố nhớ.", { portraitId: "mo", expression: "smile" }),
         return: speech("Mơ", "Mình hiểu. Dù vậy, trước khi tìm được đường về, bạn đừng tự gánh mọi thứ một mình.", { portraitId: "mo", expression: "sad" }),
         truth: speech("Mơ", "Mình có vài điều chưa chắc chắn. Khi hiểu rõ hơn, mình hứa sẽ nói với bạn.", { portraitId: "mo", expression: "worried", pose: "lookAside" })
       })
@@ -195,8 +195,8 @@ function speech(speaker, text, presentation = {}) {
   return Object.freeze({ type: "dialogue", kind: "speech", speaker, text, ...presentation });
 }
 
-function internal(text) {
-  return Object.freeze({ type: "dialogue", kind: "internal", speaker: "Mơ (nghĩ)", text });
+function internal(text, presentation = {}) {
+  return Object.freeze({ type: "dialogue", kind: "internal", speaker: "Mơ (nghĩ)", text, ...presentation });
 }
 
 function narration(text) {

@@ -8,9 +8,9 @@ import { maps } from "../data/maps.js";
 import { findLandmark, getCorrectQuizCount } from "../utils/helpers.js";
 import { formatMoney } from "../utils/format.js";
 import { saveGame } from "../storage.js";
-import { closeChoiceModal, closePanelOverlays, openChoiceModal, showMessage } from "./modal.js";
+import { closeChoiceModal, closePanelOverlays, openChoiceModal, showQuestCompletionNotification } from "./modal.js";
 import { getActiveBranchingObjective, getActiveBranchingQuestEntries } from "./branchingQuest.js";
-import { setTrackedObjective, trackBranchingQuest } from "./navigation.js";
+import { getNavigationHudDetails, getTrackedObjective, setTrackedObjective, trackBranchingQuest, updateTrackedObjective } from "./navigation.js";
 import { getChapter1Objective, getChapter1QuestEntries, isChapter1Active } from "./chapter1.js";
 import { getChapter2Objective, getChapter2QuestEntries, isChapter2Active } from "./chapter2.js";
 import { getChapter3Objective, getChapter3QuestEntries, isChapter3Active } from "./chapter3.js";
@@ -182,6 +182,85 @@ export function getCurrentObjective() {
   return sideQuest ? `Nhiệm vụ phụ: ${sideQuest.title}` : "Chuyến đi đã hoàn thành!";
 }
 
+export function getActiveQuestHud() {
+  const navigation = getNavigationHudDetails();
+  const tracked = getTrackedObjective();
+  const story = getActiveStoryQuestHud();
+  if (story) {
+    return {
+      ...story,
+      objective: navigation?.objective || story.objective,
+      distanceText: navigation?.distanceText || ""
+    };
+  }
+
+  if (tracked?.questId) {
+    const entry = getActiveBranchingQuestEntries().find((candidate) => candidate.id === tracked.questId);
+    if (entry) {
+      return {
+        title: entry.title,
+        objective: navigation?.objective || entry.objective,
+        distanceText: navigation?.distanceText || "",
+        key: `branching:${entry.id}:${entry.objective}`
+      };
+    }
+  }
+
+  if (navigation) {
+    return {
+      title: tracked?.questId ? "Nhiệm vụ đang theo dõi" : navigation.title,
+      objective: navigation.objective,
+      distanceText: navigation.distanceText,
+      key: `navigation:${tracked?.id}:${navigation.objective}`
+    };
+  }
+
+  const branching = getActiveBranchingQuestEntries().find((entry) => !["completed", "failed"].includes(entry.status));
+  if (branching) {
+    return {
+      title: branching.title,
+      objective: branching.objective,
+      distanceText: "",
+      key: `branching:${branching.id}:${branching.objective}`
+    };
+  }
+
+  const main = getQuestObjectives().find((objective) => !objective.done);
+  if (main) {
+    return {
+      title: "Một ngày du lịch Hà Nội",
+      objective: main.text,
+      distanceText: main.progress,
+      key: `main:${main.text}:${main.progress}`
+    };
+  }
+
+  const sideQuest = sideQuests.find((quest) => !isSideQuestCompleted(quest) && isSideQuestStarted(quest));
+  return sideQuest ? {
+    title: sideQuest.title,
+    objective: sideQuest.objectives.find((objective) => !isObjectiveDone(objective))?.text || sideQuest.description,
+    distanceText: "",
+    key: `side:${sideQuest.id}`
+  } : null;
+}
+
+function getActiveStoryQuestHud() {
+  if (isChapter1Active()) return storyQuestHud(1, CHAPTER_1_TITLE, getChapter1Objective());
+  if (isChapter2Active()) return storyQuestHud(2, CHAPTER_2_TITLE, getChapter2Objective());
+  if (isChapter3Active()) return storyQuestHud(3, CHAPTER_3_TITLE, getChapter3Objective());
+  if (isChapter4Active() || isChapter4PortalWaiting()) return storyQuestHud(4, CHAPTER_4_TITLE, getChapter4Objective());
+  return null;
+}
+
+function storyQuestHud(chapter, title, objective) {
+  return {
+    title: `Chương ${chapter} · ${title}`,
+    objective,
+    distanceText: "",
+    key: `story:${chapter}:${objective}`
+  };
+}
+
 function renderBranchingQuestLog() {
   const entries = getActiveBranchingQuestEntries();
   if (!entries.length) return;
@@ -338,9 +417,13 @@ export function checkAreaQuests(extraRewards = []) {
     state.completedTasks[taskKey] = true;
     state.money += quest.reward;
     extraRewards.push(`Hoàn thành nhiệm vụ khu ${quest.name}, nhận ${formatMoney(quest.reward)}.`);
-    if (!runtime.activeQuiz) {
-      showMessage(`Hoàn thành nhiệm vụ khu ${quest.name}! Bạn nhận ${formatMoney(quest.reward)}.`);
-    }
+    updateTrackedObjective({ force: true });
+    showQuestCompletionNotification({
+      completionId: `area:${mapId}`,
+      title: `Khám phá ${quest.name}`,
+      rewards: [`+${formatMoney(quest.reward)}`],
+      nextObjective: getCurrentObjective()
+    });
   });
 
   checkSideQuests(extraRewards);
@@ -419,10 +502,13 @@ export function checkSideQuests(extraRewards = []) {
     completedAny = true;
     const message = `Hoàn thành nhiệm vụ "${quest.title}", nhận ${formatMoney(quest.reward)}.`;
     extraRewards.push(message);
-
-    if (!runtime.activeQuiz) {
-      showMessage(message);
-    }
+    updateTrackedObjective({ force: true });
+    showQuestCompletionNotification({
+      completionId: `side:${quest.id}`,
+      title: quest.title,
+      rewards: [`+${formatMoney(quest.reward)}`],
+      nextObjective: getCurrentObjective()
+    });
   });
 
   if (completedAny) {

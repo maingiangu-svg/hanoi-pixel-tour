@@ -1,6 +1,7 @@
 import { createDefaultStoryState, STORY_SCORE_TYPES } from "../data/storyState.js";
 import { state } from "../state.js";
 import { saveGame } from "../storage.js";
+import { recordMoStoryChoice } from "./moRelationship.js";
 
 export function getStoryState() {
   if (!state.story || typeof state.story !== "object") {
@@ -47,6 +48,7 @@ export function setStoryChoice(key, value, { save = true } = {}) {
   const story = getStoryState();
   story.choices[key] = value;
   if (key === "originChoice" && isNonEmptyString(value)) story.originChoice = value;
+  recordMoStoryChoice(key, value, { save: false });
   if (save) saveGame();
   return true;
 }

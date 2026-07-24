@@ -49,7 +49,17 @@ globalThis.Image = class { addEventListener() {} set src(value) { this._src = va
 await import(`../src/main.js?navigation-smoke=${Date.now()}`);
 const { player, runtime, state } = await import("../src/state.js");
 const { normalizeState } = await import("../src/storage.js");
+const { sideQuests } = await import("../src/data/quests.js");
 const { startBranchingQuest, chooseQuestOption } = await import("../src/systems/branchingQuest.js");
+const {
+  dismissQuestCompletionNotification,
+  showQuestCompletionNotification,
+  updateNotifications
+} = await import("../src/systems/modal.js");
+const { getActiveQuestHud } = await import("../src/systems/questSystem.js");
+const { updateHud } = await import("../src/render/renderUI.js");
+const { getDirectionalGuidanceState } = await import("../src/render/renderNavigation.js");
+const { snapCameraToPlayer } = await import("../src/camera.js");
 const {
   clearTrackedObjective,
   getCurrentRoute,
@@ -69,10 +79,39 @@ state.vehicle.status = "stored";
 state.vehicle.equipped = false;
 state.vehicle.owned = true;
 
+assert.equal(getDirectionalGuidanceState().visible, false, "Không có objective thì không được hiện arrow");
 assert.equal(setTrackedObjective({ id: "lake", type: "landmark", targetId: "hoGuom", label: "Hồ Gươm", routeMode: "walking" }, { silent: true }), true);
 assert.equal(getResolvedObjective().stage, "reachFinalTarget");
 assert.equal(getResolvedObjective().mapId, "hoanKiem");
 assert(getCurrentRoute().length >= 2, "Landmark cùng map phải có route waypoint");
+const farGuidance = getDirectionalGuidanceState();
+assert.equal(farGuidance.showPlayerArrow, true, "Objective hợp lệ phải hiện arrow gần player");
+assert.equal(farGuidance.showScreenArrow, true, "Objective xa phải hiện arrow neo bên phải");
+
+const lakeTarget = getResolvedObjective();
+const originalPlayer = { x: player.x, y: player.y };
+player.x = lakeTarget.x - player.width / 2 - 60;
+player.y = lakeTarget.y - player.height / 2;
+snapCameraToPlayer();
+updateTrackedObjective({ force: true });
+const nearGuidance = getDirectionalGuidanceState();
+assert.equal(nearGuidance.reached, false);
+assert.equal(nearGuidance.showPlayerArrow, true);
+assert.equal(nearGuidance.showScreenArrow, false, "Objective gần trong viewport phải ẩn arrow lớn");
+
+player.x = lakeTarget.x - player.width / 2;
+player.y = lakeTarget.y - player.height / 2;
+snapCameraToPlayer();
+updateTrackedObjective({ force: true });
+const reachedGuidance = getDirectionalGuidanceState();
+assert.equal(reachedGuidance.reached, true);
+assert.equal(reachedGuidance.showPlayerArrow, false, "Tới vùng objective phải nhường chỗ cho prompt");
+assert.equal(reachedGuidance.showScreenArrow, false);
+
+player.x = originalPlayer.x;
+player.y = originalPlayer.y;
+snapCameraToPlayer();
+updateTrackedObjective({ force: true });
 
 setTrackedObjective({ id: "bridge", type: "landmark", targetId: "cauLongBien", label: "Cầu Long Biên", routeMode: "auto" }, { silent: true });
 assert.equal(getResolvedObjective().stage, "reachTransit");
@@ -85,6 +124,8 @@ setTrackedObjective({ id: "lake-drive", type: "landmark", targetId: "hoGuom", la
 assert.equal(getResolvedObjective().stage, "reachParking");
 assert.equal(getResolvedObjective().targetId, "parkingHoGuom");
 assert(getCurrentRoute().length >= 2, "Xe phải được dẫn tới bãi gửi trước khu đi bộ");
+assert.equal(getDirectionalGuidanceState().showPlayerArrow, true, "Arrow gần player phải giữ hoạt động khi đang đi xe");
+assert.equal(getDirectionalGuidanceState().showScreenArrow, true, "Điểm gửi xe xa vẫn phải có arrow neo màn hình");
 state.vehicle.status = "stored";
 state.vehicle.equipped = false;
 updateTrackedObjective({ force: true });
@@ -152,4 +193,75 @@ updateTrackedObjective();
 assert.notEqual(runtime.navigation.routeKey, blockedRouteKey, "Event di chuyển phải làm mới khóa cache route");
 runtime.eventCollisionBlocks = [];
 
-process.stdout.write("Navigation tests: OK (landmark, transit, parking, Mơ, branching quest, photo, migration, event reroute, collision, cache)\n");
+const trackedHud = getActiveQuestHud();
+assert.equal(trackedHud.title, "Hồ Gươm");
+assert.match(trackedHud.objective, /Hồ Gươm/);
+assert.match(trackedHud.distanceText, /^\d+m$/);
+
+runtime.cutscene = null;
+runtime.dialogueView = null;
+document.getElementById("characterModal").classList.add("hidden");
+assert.equal(showQuestCompletionNotification({
+  completionId: "test:quest-feedback",
+  title: "Nếm món Hà Nội",
+  rewards: ["+10.000đ"],
+  nextObjective: "Nói chuyện với cô trà đá"
+}), true);
+assert.equal(runtime.questNotification.activeId, "test:quest-feedback");
+assert.equal(document.getElementById("questCompletionName").textContent, "Nếm món Hà Nội");
+assert.equal(showQuestCompletionNotification({
+  completionId: "test:quest-feedback",
+  title: "Không được lặp"
+}), false);
+assert.equal(dismissQuestCompletionNotification(), true);
+await new Promise((resolve) => setTimeout(resolve, 180));
+
+runtime.dialogueView = { active: true };
+assert.equal(showQuestCompletionNotification({
+  completionId: "test:queued-feedback",
+  title: "Chờ hội thoại kết thúc",
+  rewards: ["+1 tem"]
+}), true);
+assert.equal(runtime.questNotification.activeId, null, "Notification phải chờ khi dialogue đang mở");
+runtime.dialogueView = null;
+assert.equal(updateNotifications(), true);
+assert.equal(runtime.questNotification.activeId, "test:queued-feedback");
+dismissQuestCompletionNotification();
+await new Promise((resolve) => setTimeout(resolve, 180));
+
+runtime.cutscene = { active: true };
+assert.equal(showQuestCompletionNotification({
+  completionId: "test:cutscene-feedback",
+  title: "Chờ cutscene kết thúc",
+  rewards: ["+1 dấu ấn"]
+}), true);
+assert.equal(runtime.questNotification.activeId, null, "Notification phải chờ khi cutscene đang mở");
+runtime.cutscene = null;
+assert.equal(updateNotifications(), true);
+assert.equal(runtime.questNotification.activeId, "test:cutscene-feedback");
+dismissQuestCompletionNotification();
+await new Promise((resolve) => setTimeout(resolve, 180));
+
+clearTrackedObjective({ force: true, silent: true });
+state.branchingQuestProgress = {};
+state.inventory.stamps = [
+  "Tem check-in Hồ Gươm",
+  "Tem Đền Ngọc Sơn",
+  "Tem Phố Cổ",
+  "Tem Lăng Bác",
+  "Tem Cầu Long Biên"
+];
+state.eatenFoods = ["phoHaNoi", "bunCha"];
+state.completedQuizzes = {
+  demo1: { correct: true },
+  demo2: { correct: true },
+  demo3: { correct: true },
+  demo4: { correct: true }
+};
+state.visitedMaps = ["hoanKiem", "baDinh", "longBien"];
+sideQuests.forEach((quest) => { state.completedTasks[`sideQuest_${quest.id}`] = true; });
+assert.equal(getActiveQuestHud(), null, "Không có quest active thì HUD phải có dữ liệu rỗng");
+updateHud();
+assert.equal(document.getElementById("hudObjectiveCard").classList.contains("hidden"), true);
+
+process.stdout.write("Navigation tests: OK (landmark, transit, parking, Mơ, branching quest, photo, migration, event reroute, collision, cache, HUD, completion feedback)\n");

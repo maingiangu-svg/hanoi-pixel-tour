@@ -97,13 +97,129 @@ export function closeAllOverlays() {
 }
 
 export function showMessage(message, duration = 4200) {
+  if (runtime.questNotification?.activeId) {
+    runtime.pendingMessage = { message, duration };
+    return;
+  }
   window.clearTimeout(runtime.messageTimer);
+  resetDialogueBoxMode();
   ui.dialogueText.textContent = message;
   ui.dialogueBox.classList.remove("hidden");
 
   runtime.messageTimer = window.setTimeout(() => {
     ui.dialogueBox.classList.add("hidden");
   }, duration);
+}
+
+export function showQuestCompletionNotification({
+  completionId,
+  title,
+  summary = "",
+  rewards = [],
+  nextObjective = ""
+}) {
+  const id = String(completionId || "");
+  const notification = runtime.questNotification;
+  if (!id || !notification || notification.shownIds.has(id) || notification.activeId === id ||
+    notification.queue.some((entry) => entry.completionId === id)) {
+    return false;
+  }
+
+  notification.shownIds.add(id);
+  notification.queue.push({
+    completionId: id,
+    title: String(title || "Nhiệm vụ"),
+    summary: String(summary || ""),
+    rewards: rewards.filter(Boolean).map(String),
+    nextObjective: String(nextObjective || "")
+  });
+  updateNotifications();
+  return true;
+}
+
+export function updateNotifications() {
+  const notification = runtime.questNotification;
+  if (!notification || notification.activeId || !notification.queue.length || isQuestFeedbackBlocked()) return false;
+  const next = notification.queue.shift();
+  notification.activeId = next.completionId;
+  window.clearTimeout(runtime.messageTimer);
+  window.clearTimeout(notification.timer);
+
+  ui.dialogueText.classList.add("hidden");
+  ui.questCompletionContent.classList.remove("hidden");
+  ui.questCompletionName.textContent = next.title;
+  ui.questCompletionSummary.textContent = next.summary;
+  ui.questCompletionSummary.classList.toggle("hidden", !next.summary);
+  ui.questCompletionRewards.innerHTML = "";
+  const rewardLines = next.rewards.length ? next.rewards : ["Không có phần thưởng"];
+  rewardLines.forEach((reward) => {
+    const line = document.createElement("span");
+    line.textContent = reward;
+    ui.questCompletionRewards.appendChild(line);
+  });
+  ui.questCompletionNext.textContent = next.nextObjective ? `Tiếp theo: ${next.nextObjective}` : "";
+  ui.questCompletionNext.classList.toggle("hidden", !next.nextObjective);
+  ui.dialogueBox.classList.remove("hidden", "is-leaving");
+  ui.dialogueBox.classList.add("is-quest-complete");
+
+  notification.timer = window.setTimeout(() => dismissQuestCompletionNotification(), 4000);
+  return true;
+}
+
+export function dismissQuestCompletionNotification() {
+  const notification = runtime.questNotification;
+  if (!notification?.activeId) return false;
+  window.clearTimeout(notification.timer);
+  notification.timer = null;
+  notification.activeId = null;
+  ui.dialogueBox.classList.add("is-leaving");
+  window.setTimeout(() => {
+    resetDialogueBoxMode();
+    ui.dialogueBox.classList.add("hidden");
+    ui.dialogueBox.classList.remove("is-leaving");
+    const pending = runtime.pendingMessage;
+    runtime.pendingMessage = null;
+    if (pending) showMessage(pending.message, pending.duration);
+    else updateNotifications();
+  }, 160);
+  return true;
+}
+
+export function isQuestCompletionNotificationActive() {
+  return Boolean(runtime.questNotification?.activeId);
+}
+
+export function resetQuestNotifications() {
+  const notification = runtime.questNotification;
+  if (!notification) return;
+  window.clearTimeout(notification.timer);
+  notification.activeId = null;
+  notification.queue.length = 0;
+  notification.shownIds.clear();
+  notification.timer = null;
+  runtime.pendingMessage = null;
+  resetDialogueBoxMode();
+  ui.dialogueBox.classList.add("hidden");
+}
+
+function resetDialogueBoxMode() {
+  ui.dialogueBox.classList.remove("is-quest-complete", "is-leaving");
+  ui.questCompletionContent?.classList.add("hidden");
+  ui.dialogueText.classList.remove("hidden");
+}
+
+function isQuestFeedbackBlocked() {
+  return Boolean(runtime.cutscene?.active) ||
+    Boolean(runtime.dialogueView?.active) ||
+    Boolean(runtime.activeQuiz) ||
+    !ui.infoModal.classList.contains("hidden") ||
+    !ui.choiceModal.classList.contains("hidden") ||
+    !ui.characterModal.classList.contains("hidden") ||
+    !ui.inventoryPanel.classList.contains("hidden") ||
+    !ui.questPanel.classList.contains("hidden") ||
+    !ui.journalPanel.classList.contains("hidden") ||
+    (ui.mapPanel && !ui.mapPanel.classList.contains("hidden")) ||
+    (ui.endingPanel && !ui.endingPanel.classList.contains("hidden"));
 }
 
 export function openChoiceModal({ tag, title, body, actions }) {

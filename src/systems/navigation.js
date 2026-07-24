@@ -209,13 +209,31 @@ export function toggleWorldGuidance() {
 }
 
 export function getNavigationHudText() {
+  const details = getNavigationHudDetails();
+  if (!details) return "";
+  return `${details.objective}${details.distanceText ? ` · ${details.distanceText}` : ""}`;
+}
+
+export function getNavigationHudDetails() {
   const tracked = getTrackedObjective();
   const resolved = getResolvedObjective();
-  if (!tracked || !resolved) return "";
-  if (resolved.unavailable) return `${tracked.label}: ${resolved.statusText}`;
+  if (!tracked || !resolved) return null;
+  if (resolved.unavailable) {
+    return {
+      title: tracked.label,
+      objective: resolved.statusText,
+      distance: null,
+      distanceText: ""
+    };
+  }
   const center = getPlayerCenter();
   const distance = resolved.mapId === state.currentMapId ? Math.round(Math.hypot(center.x - resolved.x, center.y - resolved.y) / 10) : null;
-  return `${resolved.stageLabel || tracked.label}${distance !== null ? ` · ${distance}m` : ""}`;
+  return {
+    title: tracked.label,
+    objective: resolved.stageLabel || tracked.label,
+    distance,
+    distanceText: distance !== null ? `${distance}m` : ""
+  };
 }
 
 export function trackObjectiveForDebug(type, targetId) {

@@ -35,9 +35,11 @@
             <span id="hudWeather" class="weather-badge" data-weather="clear" title="Trời quang">QUANG</span>
             <span id="hudTimeScale" class="time-scale-badge hidden">Time x1</span>
           </div>
-          <div class="hud-pill hud-objective">
-            <span class="hud-label">Mục tiêu</span>
-            <strong id="hudObjective">Ghé thăm Hồ Gươm.</strong>
+          <div id="hudObjectiveCard" class="hud-pill hud-objective">
+            <span id="hudObjectiveLabel" class="hud-label">NHIỆM VỤ ĐANG THEO DÕI</span>
+            <strong id="hudQuestName">Hành trình Hà Nội</strong>
+            <span id="hudObjective" class="hud-objective-text">Ghé thăm Hồ Gươm.</span>
+            <span id="hudObjectiveMeta" class="hud-objective-meta hidden"></span>
           </div>
         </div>
 
@@ -46,15 +48,35 @@
         <div id="vehicleStatus" class="vehicle-status hidden">Đi bộ</div>
 
         <div id="dialogueBox" class="dialogue-box hidden" role="status" aria-live="polite">
+          <div id="questCompletionContent" class="quest-completion-content hidden">
+            <div class="quest-completion-heading">
+              <span class="quest-completion-check" aria-hidden="true">✓</span>
+              <span>HOÀN THÀNH NHIỆM VỤ</span>
+            </div>
+            <strong id="questCompletionName" class="quest-completion-name"></strong>
+            <p id="questCompletionSummary" class="quest-completion-summary hidden"></p>
+            <div id="questCompletionRewards" class="quest-completion-rewards"></div>
+            <p id="questCompletionNext" class="quest-completion-next hidden"></p>
+          </div>
           <p id="dialogueText"></p>
         </div>
 
         <section id="cutsceneDialogue" class="cutscene-dialogue hidden" role="dialog" aria-live="polite" aria-labelledby="cutsceneSpeaker">
-          <p id="cutsceneKind" class="cutscene-kind">Hội thoại</p>
-          <h2 id="cutsceneSpeaker" class="cutscene-speaker"></h2>
-          <p id="cutsceneText" class="cutscene-text"></p>
-          <div id="cutsceneChoices" class="cutscene-choices"></div>
-          <p id="cutsceneHint" class="cutscene-hint">Enter/Space: Tiếp tục</p>
+          <div id="cutscenePortrait" class="cutscene-portrait hidden" aria-hidden="true">
+            <canvas id="cutscenePortraitCanvas" width="96" height="104"></canvas>
+          </div>
+          <div class="cutscene-dialogue-content">
+            <header class="cutscene-dialogue-header">
+              <p id="cutsceneKind" class="cutscene-kind">Hội thoại</p>
+              <h2 id="cutsceneSpeaker" class="cutscene-speaker"></h2>
+            </header>
+            <p id="cutsceneText" class="cutscene-text"></p>
+            <div id="cutsceneChoices" class="cutscene-choices" role="group" aria-label="Lựa chọn hội thoại"></div>
+            <footer class="cutscene-dialogue-footer">
+              <p id="cutsceneHint" class="cutscene-hint">Enter/Space: Tiếp tục</p>
+              <span id="cutsceneContinue" class="cutscene-continue" aria-hidden="true">▼</span>
+            </footer>
+          </div>
         </section>
       </div>
     </section>
