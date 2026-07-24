@@ -659,6 +659,10 @@ export function handleNpc(npc) {
 }
 
 export function handleScheduledNpc(npc) {
+  if (handleBranchingLinkedNpc(npc)) {
+    return;
+  }
+
   if (npc.id === "mo") {
     handleMoInteraction(npc);
     return;

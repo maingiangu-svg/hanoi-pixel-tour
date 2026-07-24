@@ -22,7 +22,6 @@ export function drawNavigationGuidance() {
     return;
   }
 
-  drawWorldRoute(target);
   drawPlayerDirectionArrow(guidance.angle);
   if (guidance.inside) drawWorldTargetMarker(guidance.targetScreen.x, guidance.targetScreen.y, target);
   if (guidance.showScreenArrow) drawScreenAnchorArrow(guidance.angle, guidance.distanceMeters, target);
@@ -133,8 +132,20 @@ export function getPlayerDirectionArrowScreenPosition(angle, riding = state.vehi
 }
 
 function drawScreenAnchorArrow(angle, distanceMeters, target) {
-  const anchorX = canvas.width - 49;
-  const anchorY = Math.round(canvas.height * 0.56);
+  // Tính vị trí kẹp vào cạnh màn hình theo hướng góc
+  const margin = 36;
+  const halfW = canvas.width / 2;
+  const halfH = canvas.height / 2;
+  const cx = halfW;
+  const cy = halfH;
+  // Scale vector (cos,sin) tới khi chạm cạnh màn hình
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const scaleX = cos !== 0 ? (halfW - margin) / Math.abs(cos) : Infinity;
+  const scaleY = sin !== 0 ? (halfH - margin) / Math.abs(sin) : Infinity;
+  const scale = Math.min(scaleX, scaleY);
+  const anchorX = Math.round(cx + cos * scale);
+  const anchorY = Math.round(cy + sin * scale);
   const bob = Math.floor(performance.now() / 200) % 2;
 
   ctx.save();
@@ -151,7 +162,7 @@ function drawScreenAnchorArrow(angle, distanceMeters, target) {
   drawPixelArrow(0, 0, 22, "#080b10", target.stage === "reachParking" ? "#8ee3ff" : "#ffd95a", "#fff8d6");
   ctx.restore();
 
-  drawScreenDistanceBadge(distanceMeters, anchorX, anchorY + 39);
+  drawScreenDistanceBadge(distanceMeters, anchorX, anchorY + 39 - bob);
 }
 
 function drawPixelArrow(x, y, size, outline, fill, highlight) {

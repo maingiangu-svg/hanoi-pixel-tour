@@ -173,6 +173,19 @@ canvas {
   white-space: nowrap;
 }
 
+/* Pill "Khu vực" (không có class hud-clock / hud-objective): cho wrap tên bản đồ */
+.hud-pill:not(.hud-clock):not(.hud-objective) {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.hud-pill:not(.hud-clock):not(.hud-objective) strong {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: unset;
+  line-height: 1.2;
+}
+
 .weather-badge {
   flex: 0 0 auto;
   min-width: 26px;
